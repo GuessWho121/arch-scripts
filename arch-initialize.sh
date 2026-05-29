@@ -31,8 +31,18 @@ ensure_root() {
 
 # Verify we're running inside the chroot and not on the live ISO
 check_running_in_chroot() {
-    # Compare device ID of / and the parent of /proc/$$/root (works for many chroot setups)
-    if [[ "$(stat -c %d /)" -eq "$(stat -c %d /proc/$$/root/.. 2>/dev/null || echo 0)" ]]; then
+    if [[ ! -f /etc/arch-release ]]; then
+        die "This does not look like an Arch Linux root. /etc/arch-release is missing."
+    fi
+
+    # In arch-chroot, PID 1 still belongs to the live ISO while this shell's / is
+    # the installed system. If both roots are the same, we are not chrooted.
+    local current_root
+    local init_root
+    current_root=$(stat -Lc '%d:%i' / 2>/dev/null || true)
+    init_root=$(stat -Lc '%d:%i' /proc/1/root 2>/dev/null || true)
+
+    if [[ -n ${current_root} && ${current_root} == "${init_root}" ]]; then
         die "This script must be run INSIDE a chroot environment!"
     fi
 }
@@ -64,8 +74,8 @@ check_dns_and_init_pacman_keyring() {
     # Initialize pacman keyring to avoid signature errors
     if command -v pacman-key >/dev/null 2>&1; then
         log "Initializing pacman keyring (may take a few seconds)"
-        pacman-key --init || log "pacman-key --init failed; continuing"
-        pacman-key --populate archlinux || log "pacman-key --populate failed; continuing"
+        pacman-key --init || die "pacman-key --init failed"
+        pacman-key --populate archlinux || die "pacman-key --populate archlinux failed"
     fi
 }
 
@@ -78,6 +88,27 @@ detect_microcode() {
     else
         # Unknown vendor; return empty
         printf "%s" ""
+    fi
+}
+
+check_required_commands() {
+    local missing=()
+    local command_name
+
+    for command_name in pacman awk grep findmnt stat hwclock passwd useradd systemctl visudo ping sed cp mkdir rm printf ls; do
+        command -v "${command_name}" >/dev/null 2>&1 || missing+=("${command_name}")
+    done
+
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        die "Missing required commands: ${missing[*]}"
+    fi
+}
+
+default_boot_mode() {
+    if [[ -d /sys/firmware/efi/efivars && -n "$(ls -A /sys/firmware/efi/efivars 2>/dev/null)" ]]; then
+        printf "%s" "uefi"
+    else
+        printf "%s" "bios"
     fi
 }
 
@@ -99,7 +130,7 @@ check_fstab() {
 check_root_password() {
     local root_entry
     root_entry=$(awk -F: '$1=="root"{print $2}' /etc/shadow 2>/dev/null || true)
-    if [[ -z ${root_entry} || ${root_entry} == "!" || ${root_entry} == "*" ]]; then
+    if [[ -z ${root_entry} || ${root_entry} == '!'* || ${root_entry} == '*'* ]]; then
         read -rp "Root password appears locked/empty. Set root password now? (y/N): " rans
         if [[ ${rans,,} == y ]]; then
             passwd root
@@ -117,8 +148,24 @@ ensure_networkmanager_enabled() {
     fi
     if ! systemctl is-enabled --quiet NetworkManager 2>/dev/null; then
         log "Enabling NetworkManager"
-        systemctl enable --now NetworkManager || log "Failed to enable NetworkManager"
+        systemctl enable NetworkManager || return 1
     fi
+}
+
+configure_sudoers() {
+    if ! command -v visudo >/dev/null 2>&1; then
+        log "visudo not found yet; sudoers configuration will be retried after package installation"
+        return 0
+    fi
+
+    if ! grep -Eq '^[[:space:]]*@includedir[[:space:]]+/etc/sudoers\.d' /etc/sudoers; then
+        die "/etc/sudoers does not include /etc/sudoers.d, so sudo drop-ins would be ignored"
+    fi
+
+    mkdir -p /etc/sudoers.d
+    printf "%%wheel ALL=(ALL:ALL) ALL\n" > /etc/sudoers.d/10-wheel
+    chmod 0440 /etc/sudoers.d/10-wheel
+    visudo -cf /etc/sudoers >/dev/null || die "sudoers validation failed"
 }
 
 # Cleanup installer artifacts created by this script (backups/state/tmp)
@@ -201,6 +248,7 @@ phase_targets() {
                 "/etc/hosts" \
                 "/etc/vconsole.conf" \
                 "/etc/sudoers" \
+                "/etc/sudoers.d/10-wheel" \
                 "/etc/passwd" \
                 "/etc/group" \
                 "/etc/shadow" \
@@ -209,7 +257,8 @@ phase_targets() {
         phase3)
             printf "%s\n" \
                 "/etc/pacman.conf" \
-                "/etc/default/grub"
+                "/etc/default/grub" \
+                "/etc/sudoers.d/10-wheel"
             ;;
         phase4)
             printf "%s\n" \
@@ -351,7 +400,7 @@ prompt_identity_if_needed() {
         die "Invalid username: ${USERNAME}"
     fi
 
-    if [[ ! ${HOSTNAME} =~ ^[a-zA-Z0-9._-]{1,63}$ ]]; then
+    if [[ ! ${HOSTNAME} =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$ ]]; then
         die "Invalid hostname: ${HOSTNAME}"
     fi
 }
@@ -382,7 +431,7 @@ summary_and_confirm() {
 run_phase1() {
     log "Running phase1: locale/timezone"
 
-    if ! grep -q "^#${LOCALE}" /etc/locale.gen && ! grep -q "^${LOCALE}" /etc/locale.gen; then
+    if ! awk -v locale="${LOCALE}" '$1 == "#" locale || $1 == locale { found=1 } END { exit !found }' /etc/locale.gen; then
         die "Locale ${LOCALE} not found in /etc/locale.gen"
     fi
 
@@ -391,10 +440,14 @@ run_phase1() {
     fi
 
     ln -sf "/usr/share/zoneinfo/${TIMEZONE}" /etc/localtime
-    timedatectl set-ntp true || log "timedatectl set-ntp true failed; continuing"
+    log "Skipping timedatectl in chroot; time sync will be enabled after first boot"
     hwclock --systohc
 
-    sed -i "s/^#\?${LOCALE}/${LOCALE}/" /etc/locale.gen
+    awk -v locale="${LOCALE}" '
+        $0 == "#" locale || index($0, "#" locale " ") == 1 { sub(/^#/, "") }
+        { print }
+    ' /etc/locale.gen > /tmp/arch-initialize-locale.gen
+    mv /tmp/arch-initialize-locale.gen /etc/locale.gen
     locale-gen
     printf "LANG=%s\n" "${LOCALE}" > /etc/locale.conf
 
@@ -432,9 +485,7 @@ EOF
         passwd "${USERNAME}"
     fi
 
-    if ! grep -q '^%wheel ALL=(ALL:ALL) ALL' /etc/sudoers; then
-        sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers || true
-    fi
+    configure_sudoers
 
     # Verify root password is set and not locked
     check_root_password
@@ -449,6 +500,7 @@ run_phase3() {
     microcode_pkg=$(detect_microcode)
 
     packages=(
+        linux
         networkmanager
         grub
         efibootmgr
@@ -473,8 +525,7 @@ run_phase3() {
     if pacman -Qq iwd >/dev/null 2>&1; then
         read -rp "iwd is installed and may conflict with NetworkManager. Remove iwd and continue? (y/N): " iwdans
         if [[ ${iwdans,,} == y ]]; then
-            systemctl disable --now iwd.service || true
-            systemctl mask iwd.service || true
+            log "Removing iwd package; service disable/mask is not needed inside chroot"
             pacman -Rns iwd
         else
             die "Please disable/remove iwd before proceeding"
@@ -486,6 +537,7 @@ run_phase3() {
 
     log "Installing packages: ${packages[*]}"
     pacman -Syu --needed "${packages[@]}"
+    configure_sudoers
 
     if [[ ${enable_os_prober} -eq 1 ]]; then
         if grep -q '^#\?GRUB_DISABLE_OS_PROBER=' /etc/default/grub; then
@@ -501,48 +553,9 @@ run_phase3() {
 run_phase4() {
     log "Running phase4: network setup"
 
-    systemctl enable --now NetworkManager
-    ensure_networkmanager_enabled || log "NetworkManager enablement check failed; continuing"
-
-    nmcli radio wifi on || true
-    nmcli device wifi rescan || true
-    nmcli device wifi list || true
-
-    if command -v nmcli >/dev/null 2>&1; then
-        read -rp "Connect to a Wi-Fi network now? (y/N): " connect_now
-        if [[ ${connect_now,,} == y ]]; then
-            while true; do
-                read -rp "Enter SSID to connect to (or leave empty to cancel): " ssid
-                if [[ -z ${ssid} ]]; then
-                    log "Wi-Fi connect cancelled by user"
-                    break
-                fi
-
-                log "Attempting to connect to '${ssid}' (no password)"
-                if nmcli device wifi connect "${ssid}"; then
-                    log "Connected to ${ssid}"
-                    break
-                fi
-
-                echo "Connect failed (SSID may be secured or out of range)."
-                read -rp "Try with a password? (y/N): " try_pass
-                if [[ ${try_pass,,} == y ]]; then
-                    read -rsp "Enter password: " wpass
-                    echo
-                    if nmcli device wifi connect "${ssid}" password "${wpass}"; then
-                        log "Connected to ${ssid}"
-                        break
-                    fi
-                    echo "Connect failed with provided password."
-                fi
-
-                read -rp "Try a different SSID? (y/N): " retry
-                [[ ${retry,,} == y ]] || break
-            done
-        fi
-    else
-        log "nmcli not found; cannot offer interactive Wi-Fi connection"
-    fi
+    ensure_networkmanager_enabled || die "Failed to enable NetworkManager"
+    log "NetworkManager is enabled for first boot"
+    log "Configure Wi-Fi from the live ISO before chroot, or after reboot with nmcli/nmtui"
 
     set_next_phase "phase5"
 }
@@ -561,8 +574,12 @@ run_phase5() {
         return 0
     fi
 
-    read -rp "Select boot mode (uefi/bios): " boot_type
+    local boot_default
+    boot_default=$(default_boot_mode)
+
+    read -rp "Select boot mode (uefi/bios) [${boot_default}]: " boot_type
     boot_type=${boot_type,,}
+    boot_type=${boot_type:-${boot_default}}
 
     if [[ ${boot_type} == "uefi" ]]; then
         read -rp "Enter EFI mountpoint (e.g. /boot or /boot/efi): " efi_dir
@@ -603,6 +620,7 @@ run_phase5() {
 main() {
     parse_args "$@"
     ensure_root
+    check_required_commands
     check_running_in_chroot
 
     if [[ ${RESTORE_MODE} -eq 1 ]]; then
@@ -619,7 +637,7 @@ main() {
 
     if [[ ${current_phase} == "phase1" ]]; then
         prompt_identity_if_needed
-        check_fstab || true
+        check_fstab
         summary_and_confirm
     else
         log "Resuming from ${current_phase}"
