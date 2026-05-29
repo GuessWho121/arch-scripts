@@ -159,6 +159,16 @@ default_boot_mode() {
     fi
 }
 
+default_efi_mountpoint() {
+    if findmnt -no TARGET /boot >/dev/null 2>&1; then
+        printf "%s" "/boot"
+    elif findmnt -no TARGET /boot/efi >/dev/null 2>&1; then
+        printf "%s" "/boot/efi"
+    else
+        printf "%s" ""
+    fi
+}
+
 check_fstab() {
     if [[ ! -s /etc/fstab ]]; then
         die "/etc/fstab is empty or missing. Ensure genfstab was run and the root entry is present."
@@ -621,12 +631,26 @@ run_phase5() {
     local boot_default
     boot_default=$(default_boot_mode)
 
-    read -rp "Select boot mode (uefi/bios) [${boot_default}]: " boot_type
-    boot_type=${boot_type,,}
-    boot_type=${boot_type:-${boot_default}}
+    log "Detected boot mode: ${boot_default}"
+    read -rp "Use detected boot mode '${boot_default}'? (Y/n): " boot_confirm
+    if [[ -z ${boot_confirm} || ${boot_confirm,,} == y ]]; then
+        boot_type=${boot_default}
+    else
+        read -rp "Select boot mode (uefi/bios): " boot_type
+        boot_type=${boot_type,,}
+    fi
 
     if [[ ${boot_type} == "uefi" ]]; then
-        read -rp "Enter EFI mountpoint (e.g. /boot or /boot/efi): " efi_dir
+        local efi_default
+        efi_default=$(default_efi_mountpoint)
+
+        if [[ -n ${efi_default} ]]; then
+            read -rp "Enter EFI mountpoint [${efi_default}]: " efi_dir
+            efi_dir=${efi_dir:-${efi_default}}
+        else
+            read -rp "Enter EFI mountpoint (e.g. /boot or /boot/efi): " efi_dir
+        fi
+
         [[ -n ${efi_dir} ]] || die "EFI mountpoint is required for UEFI"
         findmnt -no TARGET "${efi_dir}" >/dev/null 2>&1 || die "${efi_dir} is not a mounted filesystem"
 
