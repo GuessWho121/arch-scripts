@@ -10,9 +10,9 @@ font_name = "monospace 11"
 greeting_msg = "Welcome back"
 
 [widget.clock]
-format = "%a %H:%M"
-resolution = "1s"
-label_width = 120
+format = "%a %d %b\n%H:%M"
+resolution = "500ms"
+label_width = 560
 
 [commands]
 reboot = ["loginctl", "reboot"]
