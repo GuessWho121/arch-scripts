@@ -502,10 +502,7 @@ run_phase3() {
         linux-headers
         linux-firmware
         iputils
-        git
         openssh
-        man-db
-        man-pages
     )
     if [[ -n ${microcode_pkg} ]]; then
         packages+=("${microcode_pkg}")
