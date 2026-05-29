@@ -19,6 +19,10 @@ TARGET_HOME=${HOME:-}
 MODE=""
 MODULE=""
 
+SUPPORTED_MODULES=(
+    "regreet|greeter,login,wallpaper,greetd,cage,gui|ReGreet graphical login screen with wallpaper"
+)
+
 REGREET_FILES=(
     "/etc/greetd/config.toml"
     "/etc/greetd/regreet.toml"
@@ -27,15 +31,32 @@ REGREET_FILES=(
 )
 
 usage() {
-    cat <<'EOF'
-Usage: ./arch-config.sh [--all] [--only module] [--restore module] [--help]
+    printf "%s\n" \
+        "Usage: ./arch-config.sh [--all] [--only module] [--restore module] [--help]" \
+        "" \
+        "Options:" \
+        "  --all              Apply all implemented config modules." \
+        "  --only module      Apply one config module. Currently supported: regreet." \
+        "  --module module    Alias for --only module." \
+        "  --restore module   Restore backups for one module. Currently supported: regreet." \
+        "  --list-modules     List available modules with tags." \
+        "  -h, --help         Show this help."
+}
 
-Options:
-  --all              Apply all implemented config modules.
-  --only module      Apply one config module. Currently supported: regreet.
-  --restore module   Restore backups for one module. Currently supported: regreet.
-  -h, --help         Show this help.
-EOF
+list_modules() {
+    local item
+    local module
+    local tags
+    local description
+
+    printf "Available modules:\n\n"
+
+    for item in "${SUPPORTED_MODULES[@]}"; do
+        IFS='|' read -r module tags description <<< "${item}"
+        printf "  %s\n" "${module}"
+        printf "    tags: %s\n" "${tags}"
+        printf "    desc: %s\n\n" "${description}"
+    done
 }
 
 parse_args() {
@@ -51,12 +72,16 @@ parse_args() {
                 MODE="all"
                 shift
                 ;;
-            --only)
+            --only|--module)
                 [[ -z ${MODE} ]] || die "Use only one mode at a time"
                 [[ $# -ge 2 ]] || die "--only requires a module name"
                 MODE="only"
                 MODULE="$2"
                 shift 2
+                ;;
+            --list-modules)
+                list_modules
+                exit 0
                 ;;
             --restore)
                 [[ -z ${MODE} ]] || die "Use only one mode at a time"
