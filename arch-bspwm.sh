@@ -280,13 +280,14 @@ detect_cpu() {
 detect_gpus_from_sysfs() {
     local vendor
     local found=0
+    local vendor_file
 
     HAS_INTEL_GPU=0
     HAS_AMD_GPU=0
     HAS_NVIDIA_GPU=0
 
-    if compgen -G "/sys/class/drm/card*/device/vendor" >/dev/null 2>&1; then
-        while IFS= read -r vendor_file; do
+    for vendor_file in /sys/class/drm/card*/device/vendor; do
+        if [[ -r ${vendor_file} ]]; then
             vendor=$(cat "${vendor_file}" 2>/dev/null || true)
             case "${vendor}" in
                 0x8086)
@@ -304,7 +305,26 @@ detect_gpus_from_sysfs() {
                 *)
                     ;;
             esac
-        done < <(find /sys/class/drm -maxdepth 3 -path '/sys/class/drm/card*/device/vendor' 2>/dev/null | sort)
+        fi
+    done
+
+    if [[ ${found} -eq 0 ]] && command -v lspci >/dev/null 2>&1; then
+        if lspci | grep -Eiq 'VGA|3D|Display'; then
+            if lspci | grep -Ei 'VGA|3D|Display' | grep -Eiq 'Intel Corporation'; then
+                HAS_INTEL_GPU=1
+                found=1
+            fi
+
+            if lspci | grep -Ei 'VGA|3D|Display' | grep -Eiq 'Advanced Micro Devices|AMD|ATI'; then
+                HAS_AMD_GPU=1
+                found=1
+            fi
+
+            if lspci | grep -Ei 'VGA|3D|Display' | grep -Eiq 'NVIDIA'; then
+                HAS_NVIDIA_GPU=1
+                found=1
+            fi
+        fi
     fi
 
     if [[ ${found} -eq 0 ]]; then
