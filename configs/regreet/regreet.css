@@ -1,0 +1,47 @@
+window {
+    background-color: rgba(12, 16, 17, 0.26);
+    color: #f2eee8;
+    font-family: monospace;
+}
+
+box {
+    color: #f2eee8;
+}
+
+button,
+entry,
+combobox,
+menubutton {
+    background-color: rgba(11, 13, 16, 0.62);
+    color: #f2eee8;
+    border: 1px solid rgba(122, 170, 178, 0.52);
+    border-radius: 2px;
+    box-shadow: none;
+    text-shadow: none;
+}
+
+button:hover,
+menubutton:hover {
+    background-color: rgba(31, 57, 62, 0.86);
+    border-color: rgba(165, 210, 211, 0.9);
+}
+
+button:focus,
+entry:focus,
+combobox:focus,
+menubutton:focus {
+    border-color: #eaded0;
+    box-shadow: 0 0 0 1px rgba(234, 222, 208, 0.55);
+}
+
+entry {
+    padding: 8px 10px;
+}
+
+label {
+    color: #f2eee8;
+}
+
+*:disabled {
+    color: rgba(242, 238, 232, 0.45);
+}
