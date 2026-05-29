@@ -278,8 +278,8 @@ chmod +x arch-initialize.sh
 If cloning inside chroot:
 
 ```bash
-git clone https://github.com/USERNAME/REPOSITORY.git
-cd REPOSITORY
+git clone https://github.com/GuessWho121/arch-scripts.git
+cd arch-scripts
 chmod +x arch-initialize.sh
 ./arch-initialize.sh
 ```
