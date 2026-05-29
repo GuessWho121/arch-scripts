@@ -32,12 +32,11 @@ REGREET_FILES=(
 
 usage() {
     printf "%s\n" \
-        "Usage: ./arch-config.sh [--all] [--only module] [--restore module] [--help]" \
+        "Usage: ./arch-config.sh [--all] [--module module] [--restore module] [--help]" \
         "" \
         "Options:" \
         "  --all              Apply all implemented config modules." \
-        "  --only module      Apply one config module. Currently supported: regreet." \
-        "  --module module    Alias for --only module." \
+        "  --module module    Apply one config module. Currently supported: regreet." \
         "  --restore module   Restore backups for one module. Currently supported: regreet." \
         "  --list-modules     List available modules with tags." \
         "  -h, --help         Show this help."
@@ -72,12 +71,15 @@ parse_args() {
                 MODE="all"
                 shift
                 ;;
-            --only|--module)
+            --module)
                 [[ -z ${MODE} ]] || die "Use only one mode at a time"
-                [[ $# -ge 2 ]] || die "--only requires a module name"
-                MODE="only"
+                [[ $# -ge 2 ]] || die "--module requires a module name"
+                MODE="module"
                 MODULE="$2"
                 shift 2
+                ;;
+            --only)
+                die "--only has been removed. Use --module instead."
                 ;;
             --list-modules)
                 list_modules
@@ -295,6 +297,18 @@ install_regreet_configs() {
     install_downloaded_root_file "configs/regreet/regreet.css" "/etc/greetd/regreet.css" 0644
 }
 
+regreet_is_setup() {
+    command -v regreet >/dev/null 2>&1 \
+        && command -v cage >/dev/null 2>&1 \
+        && command -v dbus-run-session >/dev/null 2>&1 \
+        && sudo test -f /usr/share/backgrounds/arch-scripts/loginwallpaper.jpg \
+        && [[ -f "${TARGET_HOME}/Pictures/wallpaper/loginwallpaper.jpg" ]] \
+        && sudo test -f /etc/greetd/config.toml \
+        && sudo test -f /etc/greetd/regreet.toml \
+        && sudo test -f /etc/greetd/regreet.css \
+        && ! pacman -Qq greetd-tuigreet >/dev/null 2>&1
+}
+
 verify_regreet() {
     log "Verifying ReGreet setup"
 
@@ -327,6 +341,15 @@ apply_regreet() {
     mkdir -p "${TMP_DIR}"
 
     backup_module regreet
+
+    if regreet_is_setup; then
+        log "ReGreet module already appears installed; updating config files only"
+        install_regreet_configs
+        verify_regreet
+        log "ReGreet module configs updated"
+        return 0
+    fi
+
     install_regreet_packages
     install_regreet_wallpaper
     install_regreet_configs
@@ -356,7 +379,7 @@ main() {
         all)
             apply_all
             ;;
-        only)
+        module)
             case "${MODULE}" in
                 regreet)
                     apply_regreet
