@@ -29,14 +29,11 @@ ensure_root() {
     fi
 }
 
-# Verify we're running inside the chroot and not on the live ISO
 check_running_in_chroot() {
     if [[ ! -f /etc/arch-release ]]; then
         die "This does not look like an Arch Linux root. /etc/arch-release is missing."
     fi
 
-    # In arch-chroot, PID 1 still belongs to the live ISO while this shell's / is
-    # the installed system. If both roots are the same, we are not chrooted.
     local current_root
     local init_root
     current_root=$(stat -Lc '%d:%i' / 2>/dev/null || true)
@@ -47,23 +44,19 @@ check_running_in_chroot() {
     fi
 }
 
-# Ensure EFI variables are available for UEFI operations
 check_efi_vars() {
     if [[ ! -d /sys/firmware/efi/efivars || -z "$(ls -A /sys/firmware/efi/efivars 2>/dev/null)" ]]; then
         die "/sys/firmware/efi/efivars is not available or empty. EFI variables are required for UEFI bootloader installation."
     fi
 }
 
-# Ensure a kernel image exists in /boot
 check_kernel_in_boot() {
     if ! ls /boot/vmlinuz* >/dev/null 2>&1; then
         die "No kernel image (vmlinuz*) found in /boot. Ensure the 'linux' package was installed in this chroot before proceeding."
     fi
 }
 
-# Check network resolution and initialize pacman keyring if necessary
 check_dns_and_init_pacman_keyring() {
-    # Quick DNS test
     if command -v ping >/dev/null 2>&1; then
         if ! ping -c 1 -W 3 archlinux.org >/dev/null 2>&1; then
             log "DNS resolution or network appears broken inside chroot. /etc/resolv.conf:"
@@ -75,7 +68,6 @@ check_dns_and_init_pacman_keyring() {
         log "ping is not installed yet; skipping DNS probe before package installation"
     fi
 
-    # Initialize pacman keyring to avoid signature errors
     if command -v pacman-key >/dev/null 2>&1; then
         log "Initializing pacman keyring (may take a few seconds)"
         pacman-key --init || die "pacman-key --init failed"
@@ -83,14 +75,12 @@ check_dns_and_init_pacman_keyring() {
     fi
 }
 
-# Detect appropriate microcode package (intel-ucode or amd-ucode)
 detect_microcode() {
     if grep -q "GenuineIntel" /proc/cpuinfo 2>/dev/null; then
         printf "%s" "intel-ucode"
     elif grep -q "AuthenticAMD" /proc/cpuinfo 2>/dev/null; then
         printf "%s" "amd-ucode"
     else
-        # Unknown vendor; return empty
         printf "%s" ""
     fi
 }
@@ -122,7 +112,6 @@ default_boot_mode() {
     fi
 }
 
-# Basic /etc/fstab validation
 check_fstab() {
     if [[ ! -s /etc/fstab ]]; then
         die "/etc/fstab is empty or missing. Ensure genfstab was run and the root entry is present."
@@ -130,13 +119,11 @@ check_fstab() {
     if ! grep -Eq 'UUID=|/dev/' /etc/fstab; then
         log "Warning: /etc/fstab does not contain obvious device identifiers (UUID= or /dev/)."
     fi
-    # Ensure a root (/) mount entry exists
     if ! awk '$2=="/"{found=1} END{exit !found}' /etc/fstab 2>/dev/null; then
         die "/etc/fstab does not contain a root (/) mount entry. Ensure genfstab was run with the target mountpoint."
     fi
 }
 
-# Verify root password is set (not locked)
 check_root_password() {
     local root_entry
     root_entry=$(awk -F: '$1=="root"{print $2}' /etc/shadow 2>/dev/null || true)
@@ -150,7 +137,6 @@ check_root_password() {
     fi
 }
 
-# Ensure NetworkManager is enabled and available
 ensure_networkmanager_enabled() {
     if ! command -v nmcli >/dev/null 2>&1; then
         log "nmcli not found after package install"
@@ -178,7 +164,6 @@ configure_sudoers() {
     visudo -cf /etc/sudoers >/dev/null || die "sudoers validation failed"
 }
 
-# Cleanup installer artifacts created by this script (backups/state/tmp)
 cleanup_after_install() {
     read -rp "Remove installer state and backups at ${STATE_DIR}? (y/N): " clean_ans
     if [[ ${clean_ans,,} == y ]]; then
@@ -243,7 +228,6 @@ EOF
 }
 
 phase_targets() {
-    # Files this phase is expected to edit.
     case "$1" in
         phase1)
             printf "%s\n" \
@@ -497,7 +481,6 @@ EOF
 
     configure_sudoers
 
-    # Verify root password is set and not locked
     check_root_password
 
     set_next_phase "phase3"
@@ -506,7 +489,6 @@ EOF
 run_phase3() {
     log "Running phase3: packages"
 
-    # Detect and include appropriate microcode package (if any)
     microcode_pkg=$(detect_microcode)
 
     packages=(
@@ -547,7 +529,6 @@ run_phase3() {
         fi
     fi
 
-    # Ensure network/resolution and pacman keyring are OK before package operations
     check_dns_and_init_pacman_keyring
 
     log "Installing packages: ${packages[*]}"
@@ -581,7 +562,6 @@ run_phase5() {
     read -rp "Install and configure GRUB bootloader now? (y/N): " install_grub
     if [[ ${install_grub,,} != y ]]; then
         log "Skipping GRUB installation as requested"
-        # Offer to clean up state/backups before exiting
         cleanup_after_install
 
         : > "${STATE_FILE}"
@@ -603,7 +583,6 @@ run_phase5() {
         [[ -n ${efi_dir} ]] || die "EFI mountpoint is required for UEFI"
         findmnt -no TARGET "${efi_dir}" >/dev/null 2>&1 || die "${efi_dir} is not a mounted filesystem"
 
-        # Ensure EFI vars are accessible and kernel images exist
         check_efi_vars
         check_kernel_in_boot
 
@@ -615,7 +594,6 @@ run_phase5() {
         target_disk=${target_disk:-${DISK}}
         [[ -b ${target_disk} ]] || die "${target_disk} is not a block device"
 
-        # Ensure kernel images exist before installing GRUB
         check_kernel_in_boot
 
         log "Installing GRUB for BIOS on ${target_disk}"
@@ -625,12 +603,10 @@ run_phase5() {
         die "Invalid boot mode '${boot_type}'. Use 'uefi' or 'bios'"
     fi
 
-    # Final cleanup: clear checkpoint state.
     : > "${STATE_FILE}"
     rm -f "${STATE_FILE}"
     log "Checkpoint state cleaned"
 
-    # Offer to remove installer artifacts before finishing
     cleanup_after_install
 }
 
