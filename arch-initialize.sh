@@ -64,11 +64,15 @@ check_kernel_in_boot() {
 # Check network resolution and initialize pacman keyring if necessary
 check_dns_and_init_pacman_keyring() {
     # Quick DNS test
-    if ! ping -c 1 -W 3 archlinux.org >/dev/null 2>&1; then
-        log "DNS resolution or network appears broken inside chroot. /etc/resolv.conf:"
-        sed -n '1,20p' /etc/resolv.conf 2>/dev/null || true
-        read -rp "Network appears broken. Continue anyway? (y/N): " netans
-        [[ ${netans,,} == y ]] || die "Network required for package installation"
+    if command -v ping >/dev/null 2>&1; then
+        if ! ping -c 1 -W 3 archlinux.org >/dev/null 2>&1; then
+            log "DNS resolution or network appears broken inside chroot. /etc/resolv.conf:"
+            sed -n '1,20p' /etc/resolv.conf 2>/dev/null || true
+            read -rp "Network appears broken. Continue anyway? (y/N): " netans
+            [[ ${netans,,} == y ]] || die "Network required for package installation"
+        fi
+    else
+        log "ping is not installed yet; skipping DNS probe before package installation"
     fi
 
     # Initialize pacman keyring to avoid signature errors
@@ -91,17 +95,23 @@ detect_microcode() {
     fi
 }
 
-check_required_commands() {
+require_commands() {
     local missing=()
     local command_name
 
-    for command_name in pacman awk grep findmnt stat hwclock passwd useradd systemctl visudo ping sed cp mkdir rm printf ls; do
+    for command_name in "$@"; do
         command -v "${command_name}" >/dev/null 2>&1 || missing+=("${command_name}")
     done
 
     if [[ ${#missing[@]} -gt 0 ]]; then
         die "Missing required commands: ${missing[*]}"
     fi
+}
+
+check_required_commands() {
+    require_commands \
+        pacman awk grep findmnt stat hwclock passwd useradd usermod \
+        systemctl sed cp mkdir rm printf ls ln mv chmod dirname id locale-gen
 }
 
 default_boot_mode() {
@@ -440,7 +450,7 @@ run_phase1() {
     fi
 
     ln -sf "/usr/share/zoneinfo/${TIMEZONE}" /etc/localtime
-    log "Skipping timedatectl in chroot; time sync will be enabled after first boot"
+    systemctl enable systemd-timesyncd || log "Failed to enable systemd-timesyncd"
     hwclock --systohc
 
     awk -v locale="${LOCALE}" '
@@ -509,6 +519,11 @@ run_phase3() {
         base-devel
         linux-headers
         linux-firmware
+        iputils
+        git
+        openssh
+        man-db
+        man-pages
     )
     if [[ -n ${microcode_pkg} ]]; then
         packages+=("${microcode_pkg}")
@@ -574,6 +589,8 @@ run_phase5() {
         return 0
     fi
 
+    require_commands grub-install grub-mkconfig
+
     local boot_default
     boot_default=$(default_boot_mode)
 
@@ -620,10 +637,10 @@ run_phase5() {
 main() {
     parse_args "$@"
     ensure_root
-    check_required_commands
     check_running_in_chroot
 
     if [[ ${RESTORE_MODE} -eq 1 ]]; then
+        require_commands mkdir cp dirname
         is_valid_phase "${RESTORE_TARGET}" || die "Invalid restore target '${RESTORE_TARGET}'"
         mkdir -p "${STATE_DIR}" "${BACKUP_DIR}"
         restore_phase_files "${RESTORE_TARGET}"
@@ -631,6 +648,8 @@ main() {
         log "Restore mode complete; state set to ${RESTORE_TARGET}"
         exit 0
     fi
+
+    check_required_commands
 
     local current_phase
     current_phase=$(read_or_init_state)
