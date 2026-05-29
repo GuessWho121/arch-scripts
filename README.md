@@ -282,9 +282,7 @@ git clone https://github.com/GuessWho121/arch-scripts.git
 cd arch-scripts
 chmod +x arch-initialize.sh
 ./arch-initialize.sh
-```
 
-Replace `USERNAME/REPOSITORY` with your actual GitHub repository.
 
 ---
 
