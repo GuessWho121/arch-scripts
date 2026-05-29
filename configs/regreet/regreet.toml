@@ -6,6 +6,14 @@ fit = "Cover"
 application_prefer_dark_theme = true
 font_name = "monospace 11"
 
+[appearance]
+greeting_msg = "Welcome back"
+
+[widget.clock]
+format = "%a %H:%M"
+resolution = "1s"
+label_width = 120
+
 [commands]
 reboot = ["loginctl", "reboot"]
 poweroff = ["loginctl", "poweroff"]
