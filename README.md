@@ -209,7 +209,7 @@ findmnt /mnt/boot
 Install the minimum base system needed before chroot:
 
 ```bash
-pacstrap -K /mnt base linux linux-firmware
+pacstrap -K /mnt base linux linux-firmware git
 ```
 
 The post-chroot script installs the rest, including:
@@ -237,27 +237,6 @@ Check the generated file:
 ```bash
 cat /mnt/etc/fstab
 ```
-
----
-
-## Copy Or Download This Script
-
-You need `arch-initialize.sh` available inside the installed system before running it.
-
-If this repository is already on another drive or USB, copy it into `/mnt/root`:
-
-```bash
-mkdir -p /mnt/root/arch-scripts
-cp arch-initialize.sh /mnt/root/arch-scripts/
-```
-
-If you want to clone it after chroot, install `git` during pacstrap instead:
-
-```bash
-pacstrap -K /mnt base linux linux-firmware git
-```
-
-Then clone your repository after entering chroot.
 
 ---
 

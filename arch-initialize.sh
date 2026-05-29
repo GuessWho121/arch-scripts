@@ -17,7 +17,7 @@ AUTO_RESUME=0
 RESTORE_MODE=0
 RESTORE_TARGET=""
 
-HOSTNAME=${HOSTNAME:-}
+INSTALL_HOSTNAME=${INSTALL_HOSTNAME:-}
 USERNAME=${USERNAME:-}
 TIMEZONE=${TIMEZONE:-Asia/Kolkata}
 LOCALE=${LOCALE:-en_US.UTF-8}
@@ -382,8 +382,8 @@ read_or_init_state() {
 }
 
 prompt_identity_if_needed() {
-    if [[ -z ${HOSTNAME} ]]; then
-        read -rp "Enter hostname: " HOSTNAME
+    if [[ -z ${INSTALL_HOSTNAME} ]]; then
+        read -rp "Enter hostname: " INSTALL_HOSTNAME
     fi
 
     if [[ -z ${USERNAME} ]]; then
@@ -394,8 +394,8 @@ prompt_identity_if_needed() {
         die "Invalid username: ${USERNAME}"
     fi
 
-    if [[ ! ${HOSTNAME} =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$ ]]; then
-        die "Invalid hostname: ${HOSTNAME}"
+    if [[ ! ${INSTALL_HOSTNAME} =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$ ]]; then
+        die "Invalid hostname: ${INSTALL_HOSTNAME}"
     fi
 }
 
@@ -404,12 +404,15 @@ summary_and_confirm() {
     local efi_fs
 
     root_fs=$(findmnt -no SOURCE / 2>/dev/null || true)
-    efi_fs=$(findmnt -no SOURCE /boot/efi 2>/dev/null || true)
+    efi_fs=$(findmnt -no SOURCE /boot 2>/dev/null || true)
+    if [[ -z ${efi_fs} ]]; then
+        efi_fs=$(findmnt -no SOURCE /boot/efi 2>/dev/null || true)
+    fi
 
     echo "========================================="
     echo "Arch Linux Installation Script"
     echo "========================================="
-    echo "Hostname : ${HOSTNAME}"
+    echo "Hostname : ${INSTALL_HOSTNAME}"
     echo "Username : ${USERNAME}"
     echo "Timezone : ${TIMEZONE}"
     echo "Locale   : ${LOCALE}"
@@ -453,11 +456,11 @@ run_phase2() {
 
     prompt_identity_if_needed
 
-    printf "%s\n" "${HOSTNAME}" > /etc/hostname
+    printf "%s\n" "${INSTALL_HOSTNAME}" > /etc/hostname
     cat > /etc/hosts <<EOF
 127.0.0.1 localhost
 ::1 localhost
-127.0.1.1 ${HOSTNAME}.localdomain ${HOSTNAME}
+127.0.1.1 ${INSTALL_HOSTNAME}.localdomain ${INSTALL_HOSTNAME}
 EOF
 
     printf "KEYMAP=us\n" > /etc/vconsole.conf
