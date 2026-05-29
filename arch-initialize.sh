@@ -56,16 +56,63 @@ check_kernel_in_boot() {
     fi
 }
 
-check_dns_and_init_pacman_keyring() {
-    if command -v ping >/dev/null 2>&1; then
-        if ! ping -c 1 -W 3 archlinux.org >/dev/null 2>&1; then
-            log "DNS resolution or network appears broken inside chroot. /etc/resolv.conf:"
-            sed -n '1,20p' /etc/resolv.conf 2>/dev/null || true
-            read -rp "Network appears broken. Continue anyway? (y/N): " netans
-            [[ ${netans,,} == y ]] || die "Network required for package installation"
+network_probe() {
+    command -v ping >/dev/null 2>&1 || return 1
+    local attempt
+
+    for attempt in 1 2 3; do
+        if ping -c 1 -W 5 archlinux.org >/dev/null 2>&1; then
+            return 0
         fi
-    else
+        sleep 2
+    done
+
+    return 1
+}
+
+resolv_conf_looks_like_stub() {
+    [[ -e /etc/resolv.conf ]] || return 1
+    grep -Eq 'systemd-resolved|stub-resolv|127\.0\.0\.53' /etc/resolv.conf 2>/dev/null
+}
+
+print_iwctl_recovery_steps() {
+    cat >&2 <<'EOF'
+
+Network is still unavailable inside chroot.
+
+If you are using Wi-Fi, connect from the Arch ISO shell, not from inside this chroot:
+
+  exit
+  iwctl
+  device list
+  station wlan0 scan
+  station wlan0 get-networks
+  station wlan0 connect WIFI_NAME
+  exit
+  ping archlinux.org
+  arch-chroot /mnt
+  cd /root/arch-scripts
+  ./arch-initialize.sh --resume
+
+Replace wlan0 with your wireless device name if it is different.
+If DNS still fails after reconnecting, check /etc/resolv.conf inside chroot.
+
+EOF
+}
+
+check_dns_and_init_pacman_keyring() {
+    if ! command -v ping >/dev/null 2>&1; then
         log "ping is not installed yet; skipping DNS probe before package installation"
+    elif ! network_probe; then
+        log "Ping check failed during script. Your network may still be usable if a manual ping now works."
+        if resolv_conf_looks_like_stub; then
+            log "/etc/resolv.conf is a systemd-resolved stub; this is informational only."
+        fi
+        log "Current /etc/resolv.conf:"
+        sed -n '1,12p' /etc/resolv.conf 2>/dev/null || true
+        print_iwctl_recovery_steps
+        read -rp "Continue package installation anyway? (y/N): " netans
+        [[ ${netans,,} == y ]] || die "Network required for package installation"
     fi
 
     if command -v pacman-key >/dev/null 2>&1; then
