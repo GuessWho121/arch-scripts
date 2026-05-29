@@ -17,7 +17,7 @@ AUTO_RESUME=0
 RESTORE_MODE=0
 RESTORE_TARGET=""
 
-INSTALL_HOSTNAME=${INSTALL_HOSTNAME:-}
+HOSTNAME=${HOSTNAME:-}
 USERNAME=${USERNAME:-}
 TIMEZONE=${TIMEZONE:-Asia/Kolkata}
 LOCALE=${LOCALE:-en_US.UTF-8}
@@ -56,63 +56,16 @@ check_kernel_in_boot() {
     fi
 }
 
-network_probe() {
-    command -v ping >/dev/null 2>&1 || return 1
-    local attempt
-
-    for attempt in 1 2 3; do
-        if ping -c 1 -W 5 archlinux.org >/dev/null 2>&1; then
-            return 0
-        fi
-        sleep 2
-    done
-
-    return 1
-}
-
-resolv_conf_looks_like_stub() {
-    [[ -e /etc/resolv.conf ]] || return 1
-    grep -Eq 'systemd-resolved|stub-resolv|127\.0\.0\.53' /etc/resolv.conf 2>/dev/null
-}
-
-print_iwctl_recovery_steps() {
-    cat >&2 <<'EOF'
-
-Network is still unavailable inside chroot.
-
-If you are using Wi-Fi, connect from the Arch ISO shell, not from inside this chroot:
-
-  exit
-  iwctl
-  device list
-  station wlan0 scan
-  station wlan0 get-networks
-  station wlan0 connect WIFI_NAME
-  exit
-  ping archlinux.org
-  arch-chroot /mnt
-  cd /root/arch-scripts
-  ./arch-initialize.sh --resume
-
-Replace wlan0 with your wireless device name if it is different.
-If DNS still fails after reconnecting, check /etc/resolv.conf inside chroot.
-
-EOF
-}
-
 check_dns_and_init_pacman_keyring() {
-    if ! command -v ping >/dev/null 2>&1; then
-        log "ping is not installed yet; skipping DNS probe before package installation"
-    elif ! network_probe; then
-        log "Ping check failed during script. Your network may still be usable if a manual ping now works."
-        if resolv_conf_looks_like_stub; then
-            log "/etc/resolv.conf is a systemd-resolved stub; this is informational only."
+    if command -v ping >/dev/null 2>&1; then
+        if ! ping -c 1 -W 3 archlinux.org >/dev/null 2>&1; then
+            log "DNS resolution or network appears broken inside chroot. /etc/resolv.conf:"
+            sed -n '1,20p' /etc/resolv.conf 2>/dev/null || true
+            read -rp "Network appears broken. Continue anyway? (y/N): " netans
+            [[ ${netans,,} == y ]] || die "Network required for package installation"
         fi
-        log "Current /etc/resolv.conf:"
-        sed -n '1,12p' /etc/resolv.conf 2>/dev/null || true
-        print_iwctl_recovery_steps
-        read -rp "Continue package installation anyway? (y/N): " netans
-        [[ ${netans,,} == y ]] || die "Network required for package installation"
+    else
+        log "ping is not installed yet; skipping DNS probe before package installation"
     fi
 
     if command -v pacman-key >/dev/null 2>&1; then
@@ -156,16 +109,6 @@ default_boot_mode() {
         printf "%s" "uefi"
     else
         printf "%s" "bios"
-    fi
-}
-
-default_efi_mountpoint() {
-    if findmnt -no TARGET /boot >/dev/null 2>&1; then
-        printf "%s" "/boot"
-    elif findmnt -no TARGET /boot/efi >/dev/null 2>&1; then
-        printf "%s" "/boot/efi"
-    else
-        printf "%s" ""
     fi
 }
 
@@ -439,8 +382,8 @@ read_or_init_state() {
 }
 
 prompt_identity_if_needed() {
-    if [[ -z ${INSTALL_HOSTNAME} ]]; then
-        read -rp "Enter hostname: " INSTALL_HOSTNAME
+    if [[ -z ${HOSTNAME} ]]; then
+        read -rp "Enter hostname: " HOSTNAME
     fi
 
     if [[ -z ${USERNAME} ]]; then
@@ -451,8 +394,8 @@ prompt_identity_if_needed() {
         die "Invalid username: ${USERNAME}"
     fi
 
-    if [[ ! ${INSTALL_HOSTNAME} =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$ ]]; then
-        die "Invalid hostname: ${INSTALL_HOSTNAME}"
+    if [[ ! ${HOSTNAME} =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$ ]]; then
+        die "Invalid hostname: ${HOSTNAME}"
     fi
 }
 
@@ -461,15 +404,12 @@ summary_and_confirm() {
     local efi_fs
 
     root_fs=$(findmnt -no SOURCE / 2>/dev/null || true)
-    efi_fs=$(findmnt -no SOURCE /boot 2>/dev/null || true)
-    if [[ -z ${efi_fs} ]]; then
-        efi_fs=$(findmnt -no SOURCE /boot/efi 2>/dev/null || true)
-    fi
+    efi_fs=$(findmnt -no SOURCE /boot/efi 2>/dev/null || true)
 
     echo "========================================="
     echo "Arch Linux Installation Script"
     echo "========================================="
-    echo "Hostname : ${INSTALL_HOSTNAME}"
+    echo "Hostname : ${HOSTNAME}"
     echo "Username : ${USERNAME}"
     echo "Timezone : ${TIMEZONE}"
     echo "Locale   : ${LOCALE}"
@@ -513,11 +453,11 @@ run_phase2() {
 
     prompt_identity_if_needed
 
-    printf "%s\n" "${INSTALL_HOSTNAME}" > /etc/hostname
+    printf "%s\n" "${HOSTNAME}" > /etc/hostname
     cat > /etc/hosts <<EOF
 127.0.0.1 localhost
 ::1 localhost
-127.0.1.1 ${INSTALL_HOSTNAME}.localdomain ${INSTALL_HOSTNAME}
+127.0.1.1 ${HOSTNAME}.localdomain ${HOSTNAME}
 EOF
 
     printf "KEYMAP=us\n" > /etc/vconsole.conf
@@ -539,8 +479,6 @@ EOF
         passwd "${USERNAME}"
     fi
 
-    configure_sudoers
-
     check_root_password
 
     set_next_phase "phase3"
@@ -552,7 +490,6 @@ run_phase3() {
     microcode_pkg=$(detect_microcode)
 
     packages=(
-        linux
         networkmanager
         grub
         efibootmgr
@@ -560,9 +497,9 @@ run_phase3() {
         neovim
         base-devel
         linux-headers
-        linux-firmware
         iputils
         openssh
+        ranger
     )
     if [[ -n ${microcode_pkg} ]]; then
         packages+=("${microcode_pkg}")
@@ -631,26 +568,12 @@ run_phase5() {
     local boot_default
     boot_default=$(default_boot_mode)
 
-    log "Detected boot mode: ${boot_default}"
-    read -rp "Use detected boot mode '${boot_default}'? (Y/n): " boot_confirm
-    if [[ -z ${boot_confirm} || ${boot_confirm,,} == y ]]; then
-        boot_type=${boot_default}
-    else
-        read -rp "Select boot mode (uefi/bios): " boot_type
-        boot_type=${boot_type,,}
-    fi
+    read -rp "Select boot mode (uefi/bios) [${boot_default}]: " boot_type
+    boot_type=${boot_type,,}
+    boot_type=${boot_type:-${boot_default}}
 
     if [[ ${boot_type} == "uefi" ]]; then
-        local efi_default
-        efi_default=$(default_efi_mountpoint)
-
-        if [[ -n ${efi_default} ]]; then
-            read -rp "Enter EFI mountpoint [${efi_default}]: " efi_dir
-            efi_dir=${efi_dir:-${efi_default}}
-        else
-            read -rp "Enter EFI mountpoint (e.g. /boot or /boot/efi): " efi_dir
-        fi
-
+        read -rp "Enter EFI mountpoint (e.g. /boot or /boot/efi): " efi_dir
         [[ -n ${efi_dir} ]] || die "EFI mountpoint is required for UEFI"
         findmnt -no TARGET "${efi_dir}" >/dev/null 2>&1 || die "${efi_dir} is not a mounted filesystem"
 
