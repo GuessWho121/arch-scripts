@@ -17,7 +17,7 @@ AUTO_RESUME=0
 RESTORE_MODE=0
 RESTORE_TARGET=""
 
-HOSTNAME=${HOSTNAME:-}
+INSTALL_HOSTNAME=${INSTALL_HOSTNAME:-}
 USERNAME=${USERNAME:-}
 TIMEZONE=${TIMEZONE:-Asia/Kolkata}
 LOCALE=${LOCALE:-en_US.UTF-8}
@@ -58,10 +58,21 @@ check_kernel_in_boot() {
 
 check_dns_and_init_pacman_keyring() {
     if command -v ping >/dev/null 2>&1; then
-        if ! ping -c 1 -W 3 archlinux.org >/dev/null 2>&1; then
-            log "DNS resolution or network appears broken inside chroot. /etc/resolv.conf:"
+        local attempt
+        local network_ok=0
+
+        for attempt in 1 2 3; do
+            if ping -c 1 -W 5 archlinux.org >/dev/null 2>&1; then
+                network_ok=1
+                break
+            fi
+            sleep 2
+        done
+
+        if [[ ${network_ok} -ne 1 ]]; then
+            log "Network check failed after 3 ping attempts. /etc/resolv.conf:"
             sed -n '1,20p' /etc/resolv.conf 2>/dev/null || true
-            read -rp "Network appears broken. Continue anyway? (y/N): " netans
+            read -rp "Network check failed. Continue package installation anyway? (y/N): " netans
             [[ ${netans,,} == y ]] || die "Network required for package installation"
         fi
     else
@@ -109,6 +120,16 @@ default_boot_mode() {
         printf "%s" "uefi"
     else
         printf "%s" "bios"
+    fi
+}
+
+default_efi_mountpoint() {
+    if findmnt -no TARGET /boot >/dev/null 2>&1; then
+        printf "%s" "/boot"
+    elif findmnt -no TARGET /boot/efi >/dev/null 2>&1; then
+        printf "%s" "/boot/efi"
+    else
+        printf "%s" ""
     fi
 }
 
@@ -382,8 +403,8 @@ read_or_init_state() {
 }
 
 prompt_identity_if_needed() {
-    if [[ -z ${HOSTNAME} ]]; then
-        read -rp "Enter hostname: " HOSTNAME
+    if [[ -z ${INSTALL_HOSTNAME} ]]; then
+        read -rp "Enter hostname: " INSTALL_HOSTNAME
     fi
 
     if [[ -z ${USERNAME} ]]; then
@@ -394,8 +415,8 @@ prompt_identity_if_needed() {
         die "Invalid username: ${USERNAME}"
     fi
 
-    if [[ ! ${HOSTNAME} =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$ ]]; then
-        die "Invalid hostname: ${HOSTNAME}"
+    if [[ ! ${INSTALL_HOSTNAME} =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$ ]]; then
+        die "Invalid hostname: ${INSTALL_HOSTNAME}"
     fi
 }
 
@@ -404,12 +425,12 @@ summary_and_confirm() {
     local efi_fs
 
     root_fs=$(findmnt -no SOURCE / 2>/dev/null || true)
-    efi_fs=$(findmnt -no SOURCE /boot/efi 2>/dev/null || true)
+    efi_fs=$(findmnt -no SOURCE /boot 2>/dev/null || findmnt -no SOURCE /boot/efi 2>/dev/null || true)
 
     echo "========================================="
     echo "Arch Linux Installation Script"
     echo "========================================="
-    echo "Hostname : ${HOSTNAME}"
+    echo "Hostname : ${INSTALL_HOSTNAME}"
     echo "Username : ${USERNAME}"
     echo "Timezone : ${TIMEZONE}"
     echo "Locale   : ${LOCALE}"
@@ -453,11 +474,11 @@ run_phase2() {
 
     prompt_identity_if_needed
 
-    printf "%s\n" "${HOSTNAME}" > /etc/hostname
+    printf "%s\n" "${INSTALL_HOSTNAME}" > /etc/hostname
     cat > /etc/hosts <<EOF
 127.0.0.1 localhost
 ::1 localhost
-127.0.1.1 ${HOSTNAME}.localdomain ${HOSTNAME}
+127.0.1.1 ${INSTALL_HOSTNAME}.localdomain ${INSTALL_HOSTNAME}
 EOF
 
     printf "KEYMAP=us\n" > /etc/vconsole.conf
@@ -568,12 +589,25 @@ run_phase5() {
     local boot_default
     boot_default=$(default_boot_mode)
 
-    read -rp "Select boot mode (uefi/bios) [${boot_default}]: " boot_type
-    boot_type=${boot_type,,}
-    boot_type=${boot_type:-${boot_default}}
+    read -rp "Use detected boot mode '${boot_default}'? (Y/n): " detected_ans
+    if [[ -z ${detected_ans} || ${detected_ans,,} == y ]]; then
+        boot_type=${boot_default}
+    else
+        read -rp "Select boot mode (uefi/bios): " boot_type
+        boot_type=${boot_type,,}
+    fi
 
     if [[ ${boot_type} == "uefi" ]]; then
-        read -rp "Enter EFI mountpoint (e.g. /boot or /boot/efi): " efi_dir
+        local efi_default
+        efi_default=$(default_efi_mountpoint)
+
+        if [[ -n ${efi_default} ]]; then
+            read -rp "Enter EFI mountpoint [${efi_default}]: " efi_dir
+            efi_dir=${efi_dir:-${efi_default}}
+        else
+            read -rp "Enter EFI mountpoint (e.g. /boot or /boot/efi): " efi_dir
+        fi
+
         [[ -n ${efi_dir} ]] || die "EFI mountpoint is required for UEFI"
         findmnt -no TARGET "${efi_dir}" >/dev/null 2>&1 || die "${efi_dir} is not a mounted filesystem"
 
