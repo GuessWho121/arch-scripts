@@ -1,80 +1,96 @@
+/* OLED-Optimized Color Palette */
+@define-color bg_void rgba(0, 0, 0, 0.35);    /* Darker overlay to let the wallpaper's brights pop */
+@define-color panel_bg rgba(0, 0, 0, 0.88);   /* Near-true black for deep OLED contrast */
+@define-color widget_bg rgba(4, 9, 12, 0.80); /* Extremely dark slate for input fields */
+@define-color border_cyan rgba(92, 161, 166, 0.85); /* Higher opacity for ultra-crisp edges */
+@define-color border_cyan_dim rgba(92, 161, 166, 0.25);
+@define-color text_glow #e3f2f1;
+@define-color text_muted #8fa6a8;
+
 window {
-    background-color: rgba(6, 14, 10, 0.16);
-    color: #efffed;
-    font-family: monospace;
+    background-color: @bg_void;
+    color: @text_glow;
+    font-family: "JetBrains Mono", monospace;
 }
 
+/* Central structural container */
 box {
-    background-color: rgba(7, 18, 12, 0.50);
-    color: #efffed;
-    border-color: rgba(116, 214, 126, 0.72);
+    background-color: @panel_bg;
+    color: @text_glow;
+    border: 2px solid @border_cyan;
+    border-radius: 0px; 
+    padding: 30px;
+    box-shadow: 0 0 15px rgba(92, 161, 166, 0.15); 
 }
 
+/* Container framing for inputs and session controls */
 frame.background {
-    background-color: rgba(7, 18, 12, 0.50);
-    border: 1px solid rgba(116, 214, 126, 0.72);
-    border-radius: 4px;
-    color: #efffed;
+    background-color: @widget_bg;
+    border: 1px solid @border_cyan_dim;
+    border-radius: 0px;
+    padding: 20px;
 }
 
+/* Large Clock / Greeting Heading Styling */
 frame.background > label {
-    color: #efffed;
-    font-family: serif;
-    font-size: 84px;
-    font-weight: 900;
-    line-height: 0.85;
-    padding: 14px 34px 18px;
-    text-shadow: 0 3px 10px rgba(0, 0, 0, 0.78);
+    color: @text_glow;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 32px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    padding-bottom: 20px;
+    text-shadow: 0 0 10px rgba(92, 161, 166, 0.6);
 }
 
+/* Input Fields and Buttons */
 button,
 entry,
 combobox,
 menubutton {
-    background-color: rgba(8, 24, 15, 0.50);
-    color: #efffed;
-    border: 1px solid rgba(116, 214, 126, 0.78);
-    border-radius: 2px;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: @text_glow;
+    border: 1px solid @border_cyan_dim;
+    border-radius: 0px;
     box-shadow: none;
     text-shadow: none;
+    padding: 10px 14px;
 }
 
+/* Hover States */
 button:hover,
 menubutton:hover {
-    background-color: rgba(31, 89, 42, 0.66);
-    border-color: rgba(180, 255, 181, 0.95);
+    background-color: rgba(20, 45, 55, 0.9);
+    border-color: @border_cyan;
+    color: #ffffff;
 }
 
+/* Focus States */
 button:focus,
 entry:focus,
 combobox:focus,
 menubutton:focus {
-    border-color: #d8ffd2;
-    box-shadow: 0 0 0 1px rgba(184, 255, 181, 0.72);
+    border-color: @text_glow;
+    background-color: rgba(10, 25, 35, 0.9);
+    box-shadow: 0 0 5px rgba(227, 242, 241, 0.5);
 }
 
 entry {
-    padding: 8px 10px;
+    font-weight: 400;
 }
 
 label {
-    color: #efffed;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.82);
-}
-
-button {
-    font-weight: 700;
+    color: @text_glow;
 }
 
 combobox arrow {
-    color: #b8ffb5;
+    color: @border_cyan;
 }
 
 selection {
-    background-color: rgba(73, 171, 84, 0.72);
-    color: #06100a;
+    background-color: @border_cyan;
+    color: #000000;
 }
 
 *:disabled {
-    color: rgba(239, 255, 237, 0.50);
+    color: rgba(143, 166, 168, 0.3);
 }
