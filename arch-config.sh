@@ -27,7 +27,7 @@ REGREET_FILES=(
     "/etc/greetd/config.toml"
     "/etc/greetd/regreet.toml"
     "/etc/greetd/regreet.css"
-    "/usr/share/backgrounds/arch-scripts/loginwallpaper.jpg"
+    "/usr/share/backgrounds/wallpapers/loginwallpaper.jpg"
 )
 
 usage() {
@@ -286,16 +286,21 @@ install_regreet_wallpaper() {
     tmp_file=$(mktemp "${TMP_DIR}/wallpaper.XXXXXX")
     download_file "${BASE_RAW_URL}/wallpapers/loginwallpaper.jpg" "${tmp_file}"
     install -Dm 0644 "${tmp_file}" "${user_wallpaper}"
-    sudo install -Dm 0644 "${user_wallpaper}" "/usr/share/backgrounds/arch-scripts/loginwallpaper.jpg"
+    sudo install -Dm 0644 "${user_wallpaper}" "/usr/share/backgrounds/wallpapers/loginwallpaper.jpg"
     rm -f "${tmp_file}"
 }
 
 check_regreet_wallpaper() {
     local user_wallpaper="${TARGET_HOME}/Pictures/wallpaper/loginwallpaper.jpg"
-    local system_wallpaper="/usr/share/backgrounds/arch-scripts/loginwallpaper.jpg"
+    local system_wallpaper="/usr/share/backgrounds/wallpapers/loginwallpaper.jpg"
 
     [[ -s ${user_wallpaper} ]] || die "Wallpaper missing or empty at ${user_wallpaper}"
     sudo test -s "${system_wallpaper}" || die "Wallpaper missing or empty at ${system_wallpaper}"
+}
+
+check_regreet_background_config() {
+    sudo grep -Eq '^[[:space:]]*path[[:space:]]*=[[:space:]]*"/usr/share/backgrounds/wallpapers/loginwallpaper\.jpg"' /etc/greetd/regreet.toml \
+        || die "/etc/greetd/regreet.toml must point background.path to /usr/share/backgrounds/wallpapers/loginwallpaper.jpg"
 }
 
 install_regreet_configs() {
@@ -309,7 +314,7 @@ regreet_is_setup() {
     command -v regreet >/dev/null 2>&1 \
         && command -v cage >/dev/null 2>&1 \
         && command -v dbus-run-session >/dev/null 2>&1 \
-        && sudo test -f /usr/share/backgrounds/arch-scripts/loginwallpaper.jpg \
+        && sudo test -f /usr/share/backgrounds/wallpapers/loginwallpaper.jpg \
         && [[ -f "${TARGET_HOME}/Pictures/wallpaper/loginwallpaper.jpg" ]] \
         && sudo test -f /etc/greetd/config.toml \
         && sudo test -f /etc/greetd/regreet.toml \
@@ -326,6 +331,7 @@ verify_regreet() {
     sudo test -f /etc/greetd/regreet.toml || die "/etc/greetd/regreet.toml is missing"
     sudo test -f /etc/greetd/regreet.css || die "/etc/greetd/regreet.css is missing"
     check_regreet_wallpaper
+    check_regreet_background_config
 
     sudo systemctl enable greetd.service >/dev/null
     sudo systemctl is-enabled --quiet greetd.service || die "greetd.service is not enabled"

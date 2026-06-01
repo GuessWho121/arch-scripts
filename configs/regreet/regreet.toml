@@ -1,5 +1,5 @@
 [background]
-path = "/home/guesswho/Pictures/wallpaper/loginwallpaper.jpg"
+path = "/usr/share/backgrounds/wallpapers/loginwallpaper.jpg"
 fit = "Cover"
 
 [GTK]
@@ -11,7 +11,7 @@ greeting_msg = "S E S S I O N"
 
 [widget.clock]
 format = "%H:%M  |  %A, %B %d"
-resolution = "1000ms"
+resolution = "60s"
 
 [commands]
 reboot = ["loginctl", "reboot"]
