@@ -1,18 +1,17 @@
 [background]
-path = "/usr/share/backgrounds/arch-scripts/loginwallpaper.jpg"
+path = "/home/guesswho/Pictures/wallpaper/loginwallpaper.jpg"
 fit = "Cover"
 
 [GTK]
 application_prefer_dark_theme = true
-font_name = "monospace 11"
+font_name = "JetBrains Mono 11"
 
 [appearance]
-greeting_msg = "Welcome back"
+greeting_msg = "S E S S I O N"
 
 [widget.clock]
-format = "%a %d %b\n%H:%M"
-resolution = "500ms"
-label_width = 560
+format = "%H:%M  |  %A, %B %d"
+resolution = "1000ms"
 
 [commands]
 reboot = ["loginctl", "reboot"]
