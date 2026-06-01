@@ -290,6 +290,14 @@ install_regreet_wallpaper() {
     rm -f "${tmp_file}"
 }
 
+check_regreet_wallpaper() {
+    local user_wallpaper="${TARGET_HOME}/Pictures/wallpaper/loginwallpaper.jpg"
+    local system_wallpaper="/usr/share/backgrounds/arch-scripts/loginwallpaper.jpg"
+
+    [[ -s ${user_wallpaper} ]] || die "Wallpaper missing or empty at ${user_wallpaper}"
+    sudo test -s "${system_wallpaper}" || die "Wallpaper missing or empty at ${system_wallpaper}"
+}
+
 install_regreet_configs() {
     log "Downloading and installing ReGreet configs"
     install_downloaded_root_file "configs/regreet/config.toml" "/etc/greetd/config.toml" 0644
@@ -317,10 +325,7 @@ verify_regreet() {
     sudo test -f /etc/greetd/config.toml || die "/etc/greetd/config.toml is missing"
     sudo test -f /etc/greetd/regreet.toml || die "/etc/greetd/regreet.toml is missing"
     sudo test -f /etc/greetd/regreet.css || die "/etc/greetd/regreet.css is missing"
-    sudo test -f /usr/share/backgrounds/arch-scripts/loginwallpaper.jpg \
-        || die "System wallpaper is missing"
-    [[ -f "${TARGET_HOME}/Pictures/wallpaper/loginwallpaper.jpg" ]] \
-        || die "User wallpaper is missing"
+    check_regreet_wallpaper
 
     sudo systemctl enable greetd.service >/dev/null
     sudo systemctl is-enabled --quiet greetd.service || die "greetd.service is not enabled"
