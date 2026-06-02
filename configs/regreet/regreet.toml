@@ -4,14 +4,15 @@ fit = "Cover"
 
 [GTK]
 application_prefer_dark_theme = true
-font_name = "JetBrains Mono 11"
+font_name = "Inter 11"
 
 [appearance]
-greeting_msg = "S E S S I O N"
+greeting_msg = "Welcome back"
 
 [widget.clock]
-format = "%H:%M  |  %A, %B %d"
+format = "%H:%M\n%A, %B %d"
 resolution = "60s"
+label_width = 520
 
 [commands]
 reboot = ["loginctl", "reboot"]

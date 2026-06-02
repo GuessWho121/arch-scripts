@@ -30,6 +30,22 @@ REGREET_FILES=(
     "/usr/share/backgrounds/wallpapers/loginwallpaper.jpg"
 )
 
+REGREET_PACKAGES=(
+    cage
+    greetd-regreet
+    dbus
+    curl
+    inter-font
+    ttf-montserrat
+)
+
+REGREET_REMOVABLE_PACKAGES=(
+    cage
+    greetd-regreet
+    inter-font
+    ttf-montserrat
+)
+
 usage() {
     printf "%s\n" \
         "Usage: ./arch-config.sh [--all] [--module module] [--restore module] [--help]" \
@@ -272,7 +288,7 @@ install_downloaded_root_file() {
 
 install_regreet_packages() {
     log "Installing ReGreet packages"
-    sudo pacman -S --needed --noconfirm cage greetd-regreet dbus curl
+    sudo pacman -S --noconfirm "${REGREET_PACKAGES[@]}"
 }
 
 install_regreet_wallpaper() {
@@ -314,12 +330,23 @@ regreet_is_setup() {
     command -v regreet >/dev/null 2>&1 \
         && command -v cage >/dev/null 2>&1 \
         && command -v dbus-run-session >/dev/null 2>&1 \
+        && pacman -Qq inter-font >/dev/null 2>&1 \
+        && pacman -Qq ttf-montserrat >/dev/null 2>&1 \
         && sudo test -f /usr/share/backgrounds/wallpapers/loginwallpaper.jpg \
         && [[ -f "${TARGET_HOME}/Pictures/wallpaper/loginwallpaper.jpg" ]] \
         && sudo test -f /etc/greetd/config.toml \
         && sudo test -f /etc/greetd/regreet.toml \
         && sudo test -f /etc/greetd/regreet.css \
         && ! pacman -Qq greetd-tuigreet >/dev/null 2>&1
+}
+
+regreet_module_present() {
+    command -v regreet >/dev/null 2>&1 \
+        || command -v cage >/dev/null 2>&1 \
+        || pacman -Qq greetd-regreet >/dev/null 2>&1 \
+        || sudo test -e /etc/greetd/regreet.toml \
+        || sudo test -e /etc/greetd/regreet.css \
+        || sudo test -e /usr/share/backgrounds/wallpapers/loginwallpaper.jpg
 }
 
 verify_regreet() {
@@ -346,6 +373,25 @@ remove_tuigreet() {
     fi
 }
 
+uninstall_regreet_module() {
+    local package
+
+    log "Removing existing ReGreet module files"
+    sudo rm -f \
+        /etc/greetd/config.toml \
+        /etc/greetd/regreet.toml \
+        /etc/greetd/regreet.css \
+        /usr/share/backgrounds/wallpapers/loginwallpaper.jpg
+
+    log "Removing existing ReGreet module packages where possible"
+    for package in "${REGREET_REMOVABLE_PACKAGES[@]}"; do
+        if pacman -Qq "${package}" >/dev/null 2>&1; then
+            sudo pacman -Rns --noconfirm "${package}" \
+                || log "Could not remove ${package}; it may be required by another package"
+        fi
+    done
+}
+
 apply_regreet() {
     sudo mkdir -p "${STATE_DIR}" "${BACKUP_DIR}"
     rm -rf "${TMP_DIR}"
@@ -353,12 +399,9 @@ apply_regreet() {
 
     backup_module regreet
 
-    if regreet_is_setup; then
-        log "ReGreet module already appears installed; updating config files only"
-        install_regreet_configs
-        verify_regreet
-        log "ReGreet module configs updated"
-        return 0
+    if regreet_module_present; then
+        log "Existing ReGreet module state detected; rebuilding from current configs"
+        uninstall_regreet_module
     fi
 
     install_regreet_packages

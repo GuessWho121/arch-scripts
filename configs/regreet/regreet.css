@@ -1,52 +1,65 @@
-@define-color bg_void rgba(0, 0, 0, 0.20);
-@define-color panel_bg rgba(4, 12, 7, 0.52);
-@define-color widget_bg rgba(3, 10, 6, 0.58);
-@define-color border_green rgba(122, 224, 130, 0.82);
-@define-color border_green_dim rgba(122, 224, 130, 0.38);
-@define-color text_main #efffed;
-@define-color text_muted #b8d9b8;
-@define-color focus_green #b8ffb5;
+@define-color surface rgba(15, 19, 28, 0.45);
+@define-color surface-strong rgba(10, 14, 23, 0.58);
+@define-color surface-field rgba(10, 14, 23, 0.50);
+@define-color cyan #00f0ff;
+@define-color cyan-soft #dbfcff;
+@define-color cyan-border rgba(0, 219, 233, 0.28);
+@define-color cyan-border-strong rgba(0, 240, 255, 0.72);
+@define-color peach #eabea0;
+@define-color text-main #dfe2ef;
+@define-color text-muted #b9cacb;
+@define-color danger #ffb4ab;
 
 window {
-    background-color: @bg_void;
-    color: @text_main;
-    font-family: monospace;
+    background-color: rgba(0, 0, 0, 0.30);
+    color: @text-main;
+    font-family: "Inter", sans-serif;
 }
 
 frame.background {
-    background-color: @panel_bg;
-    border: 1px solid @border_green;
-    border-radius: 2px;
-    color: @text_main;
-    padding: 20px;
+    background-color: @surface;
+    border: 1px solid @cyan-border;
+    border-radius: 18px;
+    color: @text-main;
+    padding: 32px;
+    box-shadow: 0 0 28px rgba(0, 0, 0, 0.38);
 }
 
 frame.background > label {
-    color: @text_main;
-    font-family: serif;
-    font-size: 64px;
+    color: @cyan-soft;
+    font-family: "Montserrat", "Inter", sans-serif;
+    font-size: 72px;
     font-weight: 800;
-    line-height: 0.9;
-    padding: 10px 28px 16px;
+    line-height: 0.88;
+    padding: 10px 28px 20px;
+    text-shadow: 0 0 18px rgba(0, 240, 255, 0.22);
+}
+
+label {
+    color: @text-main;
 }
 
 button,
 entry,
 combobox,
 menubutton {
-    background-color: @widget_bg;
-    color: @text_main;
-    border: 1px solid @border_green_dim;
-    border-radius: 2px;
+    background-color: @surface-field;
+    color: @text-main;
+    border: 1px solid rgba(132, 148, 149, 0.22);
+    border-radius: 12px;
     box-shadow: none;
     text-shadow: none;
-    padding: 8px 12px;
+    padding: 10px 14px;
+}
+
+button {
+    font-weight: 700;
 }
 
 button:hover,
 menubutton:hover {
-    background-color: rgba(28, 82, 36, 0.66);
-    border-color: @border_green;
+    background-color: rgba(0, 240, 255, 0.20);
+    border-color: @cyan-border-strong;
     color: #ffffff;
 }
 
@@ -54,28 +67,25 @@ button:focus,
 entry:focus,
 combobox:focus,
 menubutton:focus {
-    border-color: @focus_green;
-    background-color: rgba(9, 28, 14, 0.68);
-    box-shadow: none;
+    background-color: @surface-strong;
+    border-color: @cyan;
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.26);
 }
 
 entry {
+    font-family: "Inter", sans-serif;
     font-weight: 600;
 }
 
-label {
-    color: @text_main;
-}
-
 combobox arrow {
-    color: @focus_green;
+    color: @cyan-soft;
 }
 
 selection {
-    background-color: @border_green;
-    color: #06100a;
+    background-color: @cyan;
+    color: #00363a;
 }
 
 *:disabled {
-    color: rgba(184, 217, 184, 0.42);
+    color: rgba(185, 202, 203, 0.45);
 }
