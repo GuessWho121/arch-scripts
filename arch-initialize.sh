@@ -21,7 +21,7 @@ INSTALL_HOSTNAME=${INSTALL_HOSTNAME:-}
 USERNAME=${USERNAME:-}
 TIMEZONE=${TIMEZONE:-Asia/Kolkata}
 LOCALE=${LOCALE:-en_US.UTF-8}
-DISK=${DISK:-/dev/nvme0n1}
+DISK=${DISK:-}
 
 ensure_root() {
     if [[ ${EUID:-$(id -u)} -ne 0 ]]; then
@@ -112,7 +112,7 @@ require_commands() {
 check_required_commands() {
     require_commands \
         pacman awk grep findmnt stat hwclock passwd useradd usermod \
-        systemctl sed cp mkdir rm printf ls ln mv chmod dirname id locale-gen
+        systemctl sed cp mkdir rm printf ls ln mv chmod dirname id locale-gen lsblk
 }
 
 default_boot_mode() {
@@ -130,6 +130,42 @@ default_efi_mountpoint() {
         printf "%s" "/boot/efi"
     else
         printf "%s" ""
+    fi
+}
+detect_disk_from_root_mount() {
+    local root_source
+    local parent_name
+    local detected_disk
+
+    root_source=$(findmnt -no SOURCE / 2>/dev/null || true)
+    [[ -n ${root_source} && ${root_source} == /dev/* ]] || return 1
+    [[ -b ${root_source} ]] || return 1
+
+    parent_name=$(lsblk -no PKNAME "${root_source}" 2>/dev/null | awk 'NF { print; exit }' || true)
+
+    if [[ -n ${parent_name} ]]; then
+        detected_disk="/dev/${parent_name}"
+    else
+        detected_disk="${root_source}"
+    fi
+
+    [[ -b ${detected_disk} ]] || return 1
+    printf "%s" "${detected_disk}"
+}
+
+set_disk_from_root_if_unset() {
+    local detected_disk
+
+    if [[ -n ${DISK} ]]; then
+        return 0
+    fi
+
+    detected_disk=$(detect_disk_from_root_mount || true)
+    if [[ -n ${detected_disk} ]]; then
+        DISK="${detected_disk}"
+        log "Detected install disk from root mount: ${DISK}"
+    else
+        log "Could not auto-detect install disk from root mount; BIOS GRUB will ask for it manually"
     fi
 }
 
@@ -434,7 +470,7 @@ summary_and_confirm() {
     echo "Username : ${USERNAME}"
     echo "Timezone : ${TIMEZONE}"
     echo "Locale   : ${LOCALE}"
-    echo "Disk     : ${DISK}"
+    echo "Disk     : ${DISK:-not detected}"
     echo "Root FS  : ${root_fs}"
     echo "EFI FS   : ${efi_fs}"
     echo ""
@@ -618,8 +654,15 @@ run_phase5() {
         grub-install --target=x86_64-efi --efi-directory="${efi_dir}" --bootloader-id=GRUB || die "grub-install failed"
         grub-mkconfig -o /boot/grub/grub.cfg || die "grub-mkconfig failed"
     elif [[ ${boot_type} == "bios" ]]; then
-        read -rp "Enter target disk for BIOS GRUB install (e.g. /dev/sda) [${DISK}]: " target_disk
-        target_disk=${target_disk:-${DISK}}
+        set_disk_from_root_if_unset
+
+        if [[ -n ${DISK} ]]; then
+            read -rp "Enter target disk for BIOS GRUB install (e.g. /dev/sda) [${DISK}]: " target_disk
+            target_disk=${target_disk:-${DISK}}
+        else
+            read -rp "Enter target disk for BIOS GRUB install (e.g. /dev/sda): " target_disk
+        fi
+
         [[ -b ${target_disk} ]] || die "${target_disk} is not a block device"
 
         check_kernel_in_boot
@@ -661,6 +704,7 @@ main() {
     if [[ ${current_phase} == "phase1" ]]; then
         prompt_identity_if_needed
         check_fstab
+        set_disk_from_root_if_unset
         summary_and_confirm
     else
         log "Resuming from ${current_phase}"
