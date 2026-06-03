@@ -16,6 +16,8 @@ CURRENT_PHASE=""
 AUTO_RESUME=0
 RESTORE_MODE=0
 RESTORE_TARGET=""
+SCRIPT_PATH=""
+SCRIPT_DIR=""
 
 INSTALL_HOSTNAME=${INSTALL_HOSTNAME:-}
 USERNAME=${USERNAME:-}
@@ -112,7 +114,7 @@ require_commands() {
 check_required_commands() {
     require_commands \
         pacman awk grep findmnt stat hwclock passwd useradd usermod \
-        systemctl sed cp mkdir rm printf ls ln mv chmod dirname id locale-gen lsblk
+        systemctl sed cp mkdir rm printf ls ln mv chmod dirname id locale-gen lsblk readlink basename
 }
 
 default_boot_mode() {
@@ -222,11 +224,11 @@ configure_sudoers() {
 }
 
 cleanup_after_install() {
-    read -rp "Remove installer state and backups at ${STATE_DIR}? (y/N): " clean_ans
-    if [[ ${clean_ans,,} == y ]]; then
+    read -rp "Remove installer state and backups at ${STATE_DIR}? (Y/n): " clean_ans
+    if [[ -z ${clean_ans} || ${clean_ans,,} == y ]]; then
         rm -rf "${STATE_DIR}" && log "Removed installer state: ${STATE_DIR}" || log "Failed to remove ${STATE_DIR}"
     else
-        log "Leaving installer state at ${STATE_DIR}" 
+        log "Leaving installer state at ${STATE_DIR}"
     fi
 
     read -rp "Remove pacman package cache (runs 'pacman -Sc')? (y/N): " cache_ans
@@ -235,9 +237,30 @@ cleanup_after_install() {
     fi
 
     if compgen -G "/tmp/arch-initialize-*" >/dev/null 2>&1; then
-        read -rp "Remove temporary files /tmp/arch-initialize-*? (y/N): " tmp_ans
-        if [[ ${tmp_ans,,} == y ]]; then
+        read -rp "Remove temporary files /tmp/arch-initialize-*? (Y/n): " tmp_ans
+        if [[ -z ${tmp_ans} || ${tmp_ans,,} == y ]]; then
             rm -rf /tmp/arch-initialize-* || log "Failed to remove temporary files"
+        fi
+    fi
+
+    if [[ -n ${SCRIPT_DIR} && -d ${SCRIPT_DIR} && -f ${SCRIPT_DIR}/arch-initialize.sh ]]; then
+        local script_dir_name
+        script_dir_name=$(basename "${SCRIPT_DIR}")
+
+        if [[ ${script_dir_name} == "arch-scripts" ]]; then
+            read -rp "Remove installer directory ${SCRIPT_DIR} (including this script and repo files)? (y/N): " dir_ans
+            if [[ ${dir_ans,,} == y ]]; then
+                cd / || true
+                rm -rf -- "${SCRIPT_DIR}" && log "Removed installer directory: ${SCRIPT_DIR}" || log "Failed to remove ${SCRIPT_DIR}"
+                return 0
+            fi
+        fi
+    fi
+
+    if [[ -n ${SCRIPT_PATH} && -f ${SCRIPT_PATH} && $(basename "${SCRIPT_PATH}") == "arch-initialize.sh" ]]; then
+        read -rp "Remove this installer script (${SCRIPT_PATH})? (y/N): " script_ans
+        if [[ ${script_ans,,} == y ]]; then
+            rm -f -- "${SCRIPT_PATH}" && log "Removed installer script: ${SCRIPT_PATH}" || log "Failed to remove ${SCRIPT_PATH}"
         fi
     fi
 }
@@ -613,10 +636,8 @@ run_phase5() {
     read -rp "Install and configure GRUB bootloader now? (y/N): " install_grub
     if [[ ${install_grub,,} != y ]]; then
         log "Skipping GRUB installation as requested"
-        cleanup_after_install
-
-        : > "${STATE_FILE}"
         rm -f "${STATE_FILE}"
+        cleanup_after_install
         return 0
     fi
 
@@ -682,6 +703,9 @@ run_phase5() {
 }
 
 main() {
+    SCRIPT_PATH=$(readlink -f "$0" 2>/dev/null || printf "%s" "$0")
+    SCRIPT_DIR=$(dirname "${SCRIPT_PATH}")
+
     parse_args "$@"
     ensure_root
     check_running_in_chroot
