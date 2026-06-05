@@ -444,9 +444,9 @@ install_or_reinstall_go() {
 
     log "Go install failed; removing broken Go files and reinstalling"
     sudo pacman -Rns --noconfirm go >/dev/null 2>&1 || true
-    sudo rm -rf -- /usr/lib/go /usr/bin/go /usr/bin/gofmt
+    sudo rm -rf -- /usr/lib/go /usr/bin/go /usr/bin/gofmt /usr/share/doc/go /usr/share/licenses/go
     sudo pacman -Syy --noconfirm
-    sudo pacman -S --noconfirm --overwrite '/usr/lib/go/*' --overwrite '/usr/bin/go' --overwrite '/usr/bin/gofmt' go
+    sudo pacman -S --noconfirm --overwrite '/usr/lib/go/*' --overwrite '/usr/bin/go' --overwrite '/usr/bin/gofmt' --overwrite '/usr/share/doc/go/*' --overwrite '/usr/share/licenses/go/*' go
 }
 
 validate_go() {
@@ -477,8 +477,8 @@ install_yay() {
     if ! validate_go; then
         log "Go standard library validation failed; removing and reinstalling Go"
         sudo pacman -Rns --noconfirm go >/dev/null 2>&1 || true
-        sudo rm -rf -- /usr/lib/go /usr/bin/go /usr/bin/gofmt
-        sudo pacman -S --noconfirm --overwrite '/usr/lib/go/*' --overwrite '/usr/bin/go' --overwrite '/usr/bin/gofmt' go
+        sudo rm -rf -- /usr/lib/go /usr/bin/go /usr/bin/gofmt /usr/share/doc/go /usr/share/licenses/go
+        sudo pacman -S --noconfirm --overwrite '/usr/lib/go/*' --overwrite '/usr/bin/go' --overwrite '/usr/bin/gofmt' --overwrite '/usr/share/doc/go/*' --overwrite '/usr/share/licenses/go/*' go
         if ! validate_go; then
             sudo pacman -Qkk go || true
             die "Go installation is still broken after clean reinstall. Fix pacman/Go manually, then resume this script."
@@ -751,6 +751,7 @@ main() {
 }
 
 main "$@"
+
 
 
 
