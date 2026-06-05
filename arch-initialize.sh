@@ -672,7 +672,7 @@ run_phase5() {
         check_kernel_in_boot
 
         log "Installing GRUB for UEFI at ${efi_dir}"
-        grub-install --target=x86_64-efi --efi-directory="${efi_dir}" --bootloader-id=GRUB || die "grub-install failed"
+        grub-install --target=x86_64-efi --efi-directory="${efi_dir}" --bootloader-id=GRUB --removable|| die "grub-install failed"
         grub-mkconfig -o /boot/grub/grub.cfg || die "grub-mkconfig failed"
     elif [[ ${boot_type} == "bios" ]]; then
         set_disk_from_root_if_unset
