@@ -437,6 +437,10 @@ print_system_summary() {
 }
 
 install_yay() {
+    local build_root="${TARGET_HOME}/.cache/arch-bspwm"
+    local yay_dir="${build_root}/yay"
+    local yay_log="${build_root}/yay-build.log"
+
     if command -v yay >/dev/null 2>&1; then
         log "yay already installed"
         yay --version >/dev/null 2>&1 || die "yay exists but failed to run"
@@ -446,20 +450,23 @@ install_yay() {
     [[ ${EUID:-$(id -u)} -ne 0 ]] || die "makepkg cannot build yay as root; run this script as your normal sudo user"
 
     log "Installing yay build dependencies"
-    sudo pacman -Syu --needed --noconfirm git base-devel go
-    require_commands git makepkg
+    sudo pacman -Syu --needed --noconfirm git base-devel go fakeroot debugedit
+    require_commands git makepkg tee
 
-    sudo rm -rf -- "${TMP_DIR}/yay"
-    sudo mkdir -p "${TMP_DIR}"
-    sudo chown "${TARGET_USER}:$(id -gn)" "${TMP_DIR}"
-    chmod 700 "${TMP_DIR}"
+    sudo rm -rf -- "${yay_dir}"
+    install -d -m 700 "${build_root}"
+    sudo chown -R "${TARGET_USER}:$(id -gn)" "${build_root}"
+    rm -f -- "${yay_log}"
 
     log "Cloning yay from AUR"
-    git clone https://aur.archlinux.org/yay.git "${TMP_DIR}/yay"
+    git clone https://aur.archlinux.org/yay.git "${yay_dir}"
 
     log "Building and installing yay"
     sudo -v
-    (cd "${TMP_DIR}/yay" && makepkg -si --noconfirm)
+    if ! (cd "${yay_dir}" && makepkg -si --needed --noconfirm --cleanbuild 2>&1 | tee "${yay_log}"); then
+        log "yay build failed. Build log: ${yay_log}"
+        die "Failed to build/install yay"
+    fi
 
     command -v yay >/dev/null 2>&1 || die "yay installation finished but yay was not found in PATH"
     yay --version >/dev/null 2>&1 || die "yay installed but failed to run"
@@ -596,6 +603,13 @@ cleanup_after_install() {
         fi
     fi
 
+    if [[ -d ${TARGET_HOME}/.cache/arch-bspwm ]]; then
+        read -rp "Remove yay build cache ${TARGET_HOME}/.cache/arch-bspwm? (y/N): " clean_cache
+        if [[ ${clean_cache,,} == y ]]; then
+            rm -rf "${TARGET_HOME}/.cache/arch-bspwm" && log "Removed ${TARGET_HOME}/.cache/arch-bspwm" || log "Failed to remove ${TARGET_HOME}/.cache/arch-bspwm"
+        fi
+    fi
+
     if [[ -n ${SCRIPT_PATH} && -f ${SCRIPT_PATH} && $(basename "${SCRIPT_PATH}") == "arch-bspwm.sh" ]]; then
         read -rp "Remove this installer script (${SCRIPT_PATH})? (y/N): " clean_script
         if [[ ${clean_script,,} == y ]]; then
@@ -705,4 +719,6 @@ main() {
 }
 
 main "$@"
+
+
 
