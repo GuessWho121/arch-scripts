@@ -28,6 +28,7 @@ REGREET_FILES=(
     "/etc/greetd/regreet.toml"
     "/etc/greetd/regreet.css"
     "/usr/share/backgrounds/wallpapers/loginwallpaper.jpg"
+    "/var/lib/regreet/state.toml"
 )
 
 REGREET_PACKAGES=(
@@ -39,6 +40,8 @@ REGREET_PACKAGES=(
     adwaita-icon-theme
     inter-font
     ttf-montserrat
+    ttf-ibm-plex
+    ttf-material-symbols-variable
 )
 
 REGREET_REMOVABLE_PACKAGES=(
@@ -46,6 +49,8 @@ REGREET_REMOVABLE_PACKAGES=(
     greetd-regreet
     inter-font
     ttf-montserrat
+    ttf-ibm-plex
+    ttf-material-symbols-variable
 )
 
 usage() {
@@ -346,7 +351,47 @@ verify_regreet_fonts() {
 
     fc-match Inter >/dev/null 2>&1 || die "Inter font is not available"
     fc-match Montserrat >/dev/null 2>&1 || die "Montserrat font is not available"
+    fc-match "IBM Plex Sans" >/dev/null 2>&1 || die "IBM Plex Sans font is not available"
+    fc-match "Material Symbols Outlined" >/dev/null 2>&1 || die "Material Symbols Outlined font is not available"
     sudo fc-cache -f >/dev/null 2>&1 || true
+}
+
+configure_regreet_skip_selection() {
+    local regreet_user
+    local regreet_session
+    local state_file="/var/lib/regreet/state.toml"
+
+    read -rp "ReGreet skip-selection username [${TARGET_USER}]: " regreet_user
+    regreet_user=${regreet_user:-${TARGET_USER}}
+
+    if [[ ! ${regreet_user} =~ ^[a-z_][a-z0-9_-]*$ ]]; then
+        die "Invalid username for ReGreet state: ${regreet_user}"
+    fi
+
+    getent passwd "${regreet_user}" >/dev/null 2>&1 || die "User does not exist: ${regreet_user}"
+
+    read -rp "ReGreet remembered session key [bspwm]: " regreet_session
+    regreet_session=${regreet_session:-bspwm}
+
+    if [[ ! ${regreet_session} =~ ^[A-Za-z0-9_.@+-]+$ ]]; then
+        die "Invalid session key for ReGreet state: ${regreet_session}"
+    fi
+
+    if [[ ! -f /usr/share/xsessions/${regreet_session}.desktop && ! -f /usr/share/wayland-sessions/${regreet_session}.desktop ]]; then
+        log "Session desktop file not found for '${regreet_session}'. ReGreet may ignore skip-selection until a valid session is remembered."
+    fi
+
+    sudo install -d -m 0755 /var/lib/regreet
+    {
+        printf 'last_user = "%s"\n\n' "${regreet_user}"
+        printf '[user_to_last_sess]\n'
+        printf '"%s" = "%s"\n' "${regreet_user}" "${regreet_session}"
+    } | sudo tee "${state_file}" >/dev/null
+
+    if getent passwd greeter >/dev/null 2>&1; then
+        sudo chown -R greeter:greeter /var/lib/regreet
+    fi
+    sudo chmod 0644 "${state_file}"
 }
 
 install_regreet_configs() {
@@ -364,7 +409,10 @@ regreet_is_setup() {
         && pacman -Qq adwaita-icon-theme >/dev/null 2>&1 \
         && pacman -Qq inter-font >/dev/null 2>&1 \
         && pacman -Qq ttf-montserrat >/dev/null 2>&1 \
+        && pacman -Qq ttf-ibm-plex >/dev/null 2>&1 \
+        && pacman -Qq ttf-material-symbols-variable >/dev/null 2>&1 \
         && sudo test -f /usr/share/backgrounds/wallpapers/loginwallpaper.jpg \
+        && sudo test -f /var/lib/regreet/state.toml \
         && [[ -f "${TARGET_HOME}/Pictures/wallpaper/loginwallpaper.jpg" ]] \
         && sudo test -f /etc/greetd/config.toml \
         && sudo test -f /etc/greetd/regreet.toml \
@@ -415,7 +463,8 @@ uninstall_regreet_module() {
         /etc/greetd/config.toml \
         /etc/greetd/regreet.toml \
         /etc/greetd/regreet.css \
-        /usr/share/backgrounds/wallpapers/loginwallpaper.jpg
+        /usr/share/backgrounds/wallpapers/loginwallpaper.jpg \
+        /var/lib/regreet/state.toml
 
     log "Removing existing ReGreet module packages where possible"
     for package in "${REGREET_REMOVABLE_PACKAGES[@]}"; do
@@ -441,6 +490,7 @@ apply_regreet() {
     install_regreet_packages
     install_regreet_wallpaper
     install_regreet_configs
+    configure_regreet_skip_selection
     verify_regreet
     remove_tuigreet
 
@@ -488,4 +538,7 @@ main() {
 }
 
 main "$@"
+
+
+
 
