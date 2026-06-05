@@ -436,6 +436,28 @@ print_system_summary() {
     [[ ${ans,,} == y ]] || die "Setup cancelled by user"
 }
 
+install_or_reinstall_go() {
+    log "Installing/reinstalling Go"
+    if sudo pacman -S --noconfirm go; then
+        return 0
+    fi
+
+    log "Go install/reinstall failed; refreshing package databases and retrying"
+    if sudo pacman -Syy --noconfirm go; then
+        return 0
+    fi
+
+    log "pacman could not install/reinstall Go; checking any existing Go install"
+    return 1
+}
+
+validate_go() {
+    if ! command -v go >/dev/null 2>&1; then
+        return 1
+    fi
+
+    env -u GOROOT -u GOPATH -u GOFLAGS go list std >/dev/null 2>&1
+}
 install_yay() {
     local build_root="${TARGET_HOME}/.cache/arch-bspwm"
     local yay_dir="${build_root}/yay"
@@ -451,15 +473,15 @@ install_yay() {
 
     log "Installing yay build dependencies"
     sudo pacman -Syu --needed --noconfirm git base-devel fakeroot debugedit
-    sudo pacman -S --noconfirm go
-    require_commands git makepkg tee go
+    install_or_reinstall_go || true
+    require_commands git makepkg tee
 
-    if ! env -u GOROOT -u GOPATH -u GOFLAGS go list std >/dev/null 2>&1; then
-        log "Go standard library validation failed; reinstalling go"
-        sudo pacman -S --noconfirm go
-        if ! env -u GOROOT -u GOPATH -u GOFLAGS go list std >/dev/null 2>&1; then
+    if ! validate_go; then
+        log "Go standard library validation failed; retrying Go reinstall"
+        install_or_reinstall_go || true
+        if ! validate_go; then
             sudo pacman -Qkk go || true
-            die "Go installation is broken. Check pacman output above and reinstall go before building yay."
+            die "Go installation is broken or unavailable. Reinstall go manually, then resume this script."
         fi
     fi
 
@@ -729,6 +751,7 @@ main() {
 }
 
 main "$@"
+
 
 
 
