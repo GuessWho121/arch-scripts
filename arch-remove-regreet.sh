@@ -76,6 +76,36 @@ run() {
     fi
 }
 
+sudo_rm_rf() {
+    local target="$1"
+
+    if [[ ${DRY_RUN} -eq 1 ]]; then
+        printf '[dry-run] sudo rm -rf -- %s\n' "${target}"
+        return 0
+    fi
+
+    sudo rm -rf -- "${target}" 2>/dev/null && return 0
+
+    log "Normal removal failed for ${target}; retrying after resetting permissions"
+    sudo find "${target}" -depth -exec chmod u+rwX {} + 2>/dev/null || true
+    sudo rm -rf -- "${target}"
+}
+
+sudo_rm_f() {
+    local target="$1"
+
+    if [[ ${DRY_RUN} -eq 1 ]]; then
+        printf '[dry-run] sudo rm -f -- %s\n' "${target}"
+        return 0
+    fi
+
+    sudo rm -f -- "${target}" 2>/dev/null && return 0
+
+    log "Normal removal failed for ${target}; retrying after resetting permissions"
+    sudo chmod u+rw -- "${target}" 2>/dev/null || true
+    sudo rm -f -- "${target}"
+}
+
 ensure_normal_user() {
     if [[ ${EUID:-$(id -u)} -eq 0 ]]; then
         die "Run this script as your normal user, not root"
@@ -102,20 +132,22 @@ remove_old_files() {
     log "Removing old greetd/ReGreet files"
     for file in "${OLD_FILES[@]}"; do
         if sudo test -e "${file}" || sudo test -L "${file}"; then
-            run sudo rm -f "${file}"
+            sudo_rm_f "${file}"
         fi
     done
 
     for dir in "${OLD_DIRS[@]}"; do
-        if [[ ${dir} == /tmp/* ]]; then
-            [[ -e ${dir} ]] && run rm -rf "${dir}"
-        elif sudo test -e "${dir}"; then
-            run sudo rm -rf "${dir}"
+        if sudo test -e "${dir}" || [[ -e ${dir} ]]; then
+            sudo_rm_rf "${dir}"
         fi
     done
 
     if sudo test -d /etc/greetd; then
-        run sudo rmdir /etc/greetd >/dev/null 2>&1 || true
+        if [[ ${DRY_RUN} -eq 1 ]]; then
+            printf '[dry-run] sudo rmdir /etc/greetd\n'
+        else
+            sudo rmdir /etc/greetd >/dev/null 2>&1 || true
+        fi
     fi
 }
 
@@ -126,9 +158,9 @@ remove_old_wallpaper() {
     fi
 
     log "Removing shared wallpaper copies"
-    run sudo rm -f /usr/share/backgrounds/wallpapers/loginwallpaper.jpg
-    run sudo rm -f /usr/share/lightdm-webkit/themes/arch-scripts/loginwallpaper.jpg
-    run rm -f "${TARGET_HOME}/Pictures/wallpaper/loginwallpaper.jpg"
+    sudo_rm_f /usr/share/backgrounds/wallpapers/loginwallpaper.jpg
+    sudo_rm_f /usr/share/lightdm-webkit/themes/arch-scripts/loginwallpaper.jpg
+    sudo_rm_f "${TARGET_HOME}/Pictures/wallpaper/loginwallpaper.jpg"
 }
 
 remove_old_packages() {
