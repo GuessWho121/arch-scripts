@@ -442,13 +442,11 @@ install_or_reinstall_go() {
         return 0
     fi
 
-    log "Go install/reinstall failed; refreshing package databases and retrying"
-    if sudo pacman -Syy --noconfirm go; then
-        return 0
-    fi
-
-    log "pacman could not install/reinstall Go; checking any existing Go install"
-    return 1
+    log "Go install failed; removing broken Go files and reinstalling"
+    sudo pacman -Rns --noconfirm go >/dev/null 2>&1 || true
+    sudo rm -rf -- /usr/lib/go /usr/bin/go /usr/bin/gofmt
+    sudo pacman -Syy --noconfirm
+    sudo pacman -S --noconfirm --overwrite '/usr/lib/go/*' --overwrite '/usr/bin/go' --overwrite '/usr/bin/gofmt' go
 }
 
 validate_go() {
@@ -473,15 +471,17 @@ install_yay() {
 
     log "Installing yay build dependencies"
     sudo pacman -Syu --needed --noconfirm git base-devel fakeroot debugedit
-    install_or_reinstall_go || true
-    require_commands git makepkg tee
+    install_or_reinstall_go
+    require_commands git makepkg tee go
 
     if ! validate_go; then
-        log "Go standard library validation failed; retrying Go reinstall"
-        install_or_reinstall_go || true
+        log "Go standard library validation failed; removing and reinstalling Go"
+        sudo pacman -Rns --noconfirm go >/dev/null 2>&1 || true
+        sudo rm -rf -- /usr/lib/go /usr/bin/go /usr/bin/gofmt
+        sudo pacman -S --noconfirm --overwrite '/usr/lib/go/*' --overwrite '/usr/bin/go' --overwrite '/usr/bin/gofmt' go
         if ! validate_go; then
             sudo pacman -Qkk go || true
-            die "Go installation is broken or unavailable. Reinstall go manually, then resume this script."
+            die "Go installation is still broken after clean reinstall. Fix pacman/Go manually, then resume this script."
         fi
     fi
 
@@ -751,6 +751,7 @@ main() {
 }
 
 main "$@"
+
 
 
 
