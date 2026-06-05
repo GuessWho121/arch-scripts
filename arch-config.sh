@@ -35,6 +35,8 @@ REGREET_PACKAGES=(
     greetd-regreet
     dbus
     curl
+    fontconfig
+    adwaita-icon-theme
     inter-font
     ttf-montserrat
 )
@@ -195,7 +197,7 @@ preflight() {
     ensure_normal_user
     ensure_sudo
     check_not_chroot
-    require_commands id stat pacman systemctl install cp mkdir rm tee mktemp dirname basename
+    require_commands id stat pacman systemctl install cp mkdir rm tee mktemp dirname basename getent
     ensure_curl
     check_network_to_github
 }
@@ -303,6 +305,8 @@ install_regreet_wallpaper() {
     download_file "${BASE_RAW_URL}/wallpapers/loginwallpaper.jpg" "${tmp_file}"
     install -Dm 0644 "${tmp_file}" "${user_wallpaper}"
     sudo install -Dm 0644 "${user_wallpaper}" "/usr/share/backgrounds/wallpapers/loginwallpaper.jpg"
+    sudo chmod 0755 /usr/share/backgrounds /usr/share/backgrounds/wallpapers
+    sudo chmod 0644 /usr/share/backgrounds/wallpapers/loginwallpaper.jpg
     rm -f "${tmp_file}"
 }
 
@@ -319,6 +323,32 @@ check_regreet_background_config() {
         || die "/etc/greetd/regreet.toml must point background.path to /usr/share/backgrounds/wallpapers/loginwallpaper.jpg"
 }
 
+check_regreet_runtime_access() {
+    local greeter_user="greeter"
+    local greeter_group
+    local system_wallpaper="/usr/share/backgrounds/wallpapers/loginwallpaper.jpg"
+
+    getent passwd "${greeter_user}" >/dev/null 2>&1 || die "greeter user is missing"
+    greeter_group=$(getent passwd "${greeter_user}" | awk -F: '{ print $4 }')
+
+    sudo -u "${greeter_user}" test -r "${system_wallpaper}" \
+        || die "greeter user cannot read ${system_wallpaper}"
+
+    sudo usermod -aG video,input "${greeter_user}" || true
+    sudo install -d -m 0755 /usr/share/backgrounds/wallpapers
+    sudo chmod 0644 "${system_wallpaper}"
+
+    [[ -n ${greeter_group} ]] || die "Could not determine greeter group"
+}
+
+verify_regreet_fonts() {
+    require_commands fc-match fc-cache
+
+    fc-match Inter >/dev/null 2>&1 || die "Inter font is not available"
+    fc-match Montserrat >/dev/null 2>&1 || die "Montserrat font is not available"
+    sudo fc-cache -f >/dev/null 2>&1 || true
+}
+
 install_regreet_configs() {
     log "Downloading and installing ReGreet configs"
     install_downloaded_root_file "configs/regreet/config.toml" "/etc/greetd/config.toml" 0644
@@ -330,6 +360,8 @@ regreet_is_setup() {
     command -v regreet >/dev/null 2>&1 \
         && command -v cage >/dev/null 2>&1 \
         && command -v dbus-run-session >/dev/null 2>&1 \
+        && pacman -Qq fontconfig >/dev/null 2>&1 \
+        && pacman -Qq adwaita-icon-theme >/dev/null 2>&1 \
         && pacman -Qq inter-font >/dev/null 2>&1 \
         && pacman -Qq ttf-montserrat >/dev/null 2>&1 \
         && sudo test -f /usr/share/backgrounds/wallpapers/loginwallpaper.jpg \
@@ -359,6 +391,8 @@ verify_regreet() {
     sudo test -f /etc/greetd/regreet.css || die "/etc/greetd/regreet.css is missing"
     check_regreet_wallpaper
     check_regreet_background_config
+    check_regreet_runtime_access
+    verify_regreet_fonts
 
     sudo systemctl enable greetd.service >/dev/null
     sudo systemctl is-enabled --quiet greetd.service || die "greetd.service is not enabled"
@@ -454,3 +488,4 @@ main() {
 }
 
 main "$@"
+

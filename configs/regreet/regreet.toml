@@ -10,9 +10,9 @@ font_name = "Inter 11"
 greeting_msg = "Welcome back"
 
 [widget.clock]
-format = "%H:%M\n%A, %B %d"
+format = "%H:%M\n%A, %B %-d"
 resolution = "60s"
-label_width = 520
+label_width = 560
 
 [commands]
 reboot = ["loginctl", "reboot"]

@@ -1,84 +1,214 @@
-@define-color surface rgba(15, 19, 28, 0.45);
-@define-color surface-strong rgba(10, 14, 23, 0.58);
-@define-color surface-field rgba(10, 14, 23, 0.50);
+@define-color surface rgba(15, 19, 28, 0.58);
+@define-color surface-deep rgba(10, 14, 23, 0.68);
+@define-color surface-field rgba(10, 14, 23, 0.54);
+@define-color surface-hover rgba(28, 31, 41, 0.78);
 @define-color cyan #00f0ff;
 @define-color cyan-soft #dbfcff;
-@define-color cyan-border rgba(0, 219, 233, 0.28);
+@define-color cyan-border rgba(0, 240, 255, 0.30);
 @define-color cyan-border-strong rgba(0, 240, 255, 0.72);
 @define-color peach #eabea0;
+@define-color peach-soft #ffdcc5;
 @define-color text-main #dfe2ef;
 @define-color text-muted #b9cacb;
+@define-color outline rgba(132, 148, 149, 0.28);
 @define-color danger #ffb4ab;
 
-window {
-    background-color: rgba(0, 0, 0, 0.30);
+* {
     color: @text-main;
     font-family: "Inter", sans-serif;
+    outline-color: transparent;
+    text-shadow: none;
+    box-shadow: none;
+}
+
+window {
+    background-color: rgba(0, 0, 0, 0.46);
 }
 
 frame.background {
     background-color: @surface;
     border: 1px solid @cyan-border;
-    border-radius: 18px;
+    border-radius: 24px;
     color: @text-main;
-    padding: 32px;
-    box-shadow: 0 0 28px rgba(0, 0, 0, 0.38);
+    padding: 48px;
+    box-shadow:
+        0 0 34px rgba(0, 240, 255, 0.08),
+        0 30px 80px rgba(0, 0, 0, 0.42),
+        inset 0 1px rgba(219, 252, 255, 0.08),
+        inset 0 -1px rgba(234, 190, 160, 0.08);
 }
 
 frame.background > label {
     color: @cyan-soft;
     font-family: "Montserrat", "Inter", sans-serif;
-    font-size: 72px;
+    font-size: 76px;
     font-weight: 800;
-    line-height: 0.88;
-    padding: 10px 28px 20px;
-    text-shadow: 0 0 18px rgba(0, 240, 255, 0.22);
+    line-height: 0.90;
+    padding: 8px 18px 30px;
+    text-shadow:
+        0 0 22px rgba(0, 240, 255, 0.23),
+        0 4px 24px rgba(0, 0, 0, 0.45);
 }
 
 label {
     color: @text-main;
+    font-size: 16px;
 }
 
-button,
-entry,
-combobox,
-menubutton {
-    background-color: @surface-field;
-    color: @text-main;
-    border: 1px solid rgba(132, 148, 149, 0.22);
-    border-radius: 12px;
-    box-shadow: none;
-    text-shadow: none;
-    padding: 10px 14px;
+label.dim-label,
+label.subtitle,
+label.description {
+    color: @text-muted;
 }
 
-button {
+label.title,
+label.greeting {
+    color: @cyan-soft;
+    font-family: "Montserrat", "Inter", sans-serif;
+    font-size: 24px;
     font-weight: 700;
 }
 
-button:hover,
-menubutton:hover {
-    background-color: rgba(0, 240, 255, 0.20);
-    border-color: @cyan-border-strong;
-    color: #ffffff;
+label.heading,
+label.prompt,
+label.username,
+label.password,
+label.session {
+    color: @peach-soft;
+    font-family: "Inter", sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
-button:focus,
-entry:focus,
-combobox:focus,
-menubutton:focus {
-    background-color: @surface-strong;
-    border-color: @cyan;
-    box-shadow: 0 0 10px rgba(0, 240, 255, 0.26);
+entry,
+combobox,
+menubutton,
+button.combo,
+button.toggle {
+    min-height: 48px;
+    background-color: @surface-field;
+    color: @text-main;
+    border: 1px solid @outline;
+    border-radius: 14px;
+    padding: 10px 16px;
+    box-shadow: inset 0 1px rgba(219, 252, 255, 0.04);
 }
 
 entry {
     font-family: "Inter", sans-serif;
+    font-size: 16px;
     font-weight: 600;
 }
 
-combobox arrow {
+entry image,
+entry progress {
+    color: @cyan;
+}
+
+entry:focus,
+combobox:focus,
+menubutton:focus,
+button.combo:focus,
+button.toggle:focus {
+    background-color: @surface-deep;
+    border-color: @cyan;
+    box-shadow:
+        0 0 14px rgba(0, 240, 255, 0.26),
+        inset 0 0 12px rgba(0, 240, 255, 0.08);
+}
+
+combobox arrow,
+menubutton arrow {
     color: @cyan-soft;
+    min-width: 16px;
+    min-height: 16px;
+}
+
+popover,
+menu,
+menuitem {
+    background-color: rgba(10, 14, 23, 0.94);
+    color: @text-main;
+    border: 1px solid @cyan-border;
+    border-radius: 12px;
+}
+
+button {
+    min-height: 42px;
+    background-color: rgba(22, 25, 37, 0.78);
+    color: @text-main;
+    border: 1px solid @outline;
+    border-radius: 14px;
+    font-family: "Inter", sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 10px 18px;
+}
+
+button.suggested-action,
+button.default,
+button.login,
+button:default {
+    min-height: 58px;
+    background-color: rgba(0, 219, 233, 0.78);
+    color: #00363a;
+    border-color: rgba(125, 244, 255, 0.72);
+    border-radius: 14px;
+    font-family: "Inter", sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    box-shadow:
+        0 0 18px rgba(0, 240, 255, 0.22),
+        inset 0 1px rgba(219, 252, 255, 0.30);
+}
+
+button:hover,
+menubutton:hover,
+combobox:hover {
+    background-color: @surface-hover;
+    border-color: @cyan-border-strong;
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.24);
+}
+
+button.suggested-action:hover,
+button.default:hover,
+button.login:hover,
+button:default:hover {
+    background-color: rgba(125, 244, 255, 0.88);
+    color: #002022;
+    border-color: @cyan-soft;
+}
+
+button.destructive-action,
+button.power,
+button.reboot {
+    min-width: 42px;
+    min-height: 42px;
+    color: @text-muted;
+    background-color: transparent;
+    border-color: transparent;
+    border-radius: 999px;
+    padding: 8px;
+}
+
+button.destructive-action:hover,
+button.power:hover,
+button.reboot:hover {
+    color: @danger;
+    background-color: rgba(255, 180, 171, 0.12);
+    border-color: rgba(255, 180, 171, 0.35);
+    box-shadow: 0 0 12px rgba(255, 180, 171, 0.18);
+}
+
+separator {
+    min-height: 1px;
+    background-color: rgba(132, 148, 149, 0.18);
+    margin: 22px 0;
 }
 
 selection {
