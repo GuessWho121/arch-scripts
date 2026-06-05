@@ -7,19 +7,18 @@ fit = "Cover"
 [GTK]
 application_prefer_dark_theme = true
 cursor_blink = false
-font_name = "Inter 12"
+font_name = "Inter 11"
 icon_theme_name = "Adwaita"
 theme_name = "Adwaita"
 
 [appearance]
-greeting_msg = "Welcome back"
+greeting_msg = ""
 
 [widget.clock]
-format = "<span font_family='Inter' size='64000' weight='800' foreground='#00fbfb'>%H:%M</span>\n<span font_family='Inter' size='22000' weight='600' foreground='#eabea0'>%A, %B %-d</span>"
+format = "<span font_family='Inter' size='64000' weight='800' foreground='#00fbfb'>%H:%M</span>\n<span font_family='Inter' size='20000' weight='600' foreground='#eabea0'>%A, %B %-d</span>"
 resolution = "60s"
-label_width = 420
+label_width = 450
 
 [commands]
-reboot = ["loginctl", "reboot"]
-poweroff = ["loginctl", "poweroff"]
-x11_prefix = ["startx", "/usr/bin/env"]
+reboot = ["systemctl", "reboot"]
+poweroff = ["systemctl", "poweroff"]

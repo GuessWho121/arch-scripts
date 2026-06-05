@@ -18,67 +18,68 @@ TARGET_HOME=${HOME:-}
 
 MODE=""
 MODULE=""
+LIGHTDM_LOGIN_USER=""
+LIGHTDM_LOGIN_SESSION="bspwm"
 
 SUPPORTED_MODULES=(
-    "regreet|greeter,login,wallpaper,greetd,cage,gui|ReGreet graphical login screen with wallpaper"
+    "lightdm|greeter,login,wallpaper,lightdm,webkit,html,css|LightDM WebKit2 login screen with custom Arch Scripts theme"
 )
 
-REGREET_FILES=(
-    "/etc/greetd/config.toml"
-    "/etc/greetd/regreet.toml"
-    "/etc/greetd/regreet.css"
+LIGHTDM_FILES=(
+    "/etc/lightdm/lightdm.conf.d/50-arch-scripts.conf"
+    "/etc/lightdm/lightdm-webkit2-greeter.conf"
+    "/usr/share/lightdm-webkit/themes/arch-scripts/index.html"
+    "/usr/share/lightdm-webkit/themes/arch-scripts/style.css"
+    "/usr/share/lightdm-webkit/themes/arch-scripts/script.js"
+    "/usr/share/lightdm-webkit/themes/arch-scripts/loginwallpaper.jpg"
     "/usr/share/backgrounds/wallpapers/loginwallpaper.jpg"
-    "/var/lib/regreet/state.toml"
 )
 
-REGREET_PACKAGES=(
-    cage
-    greetd-regreet
+LIGHTDM_PACKAGES=(
+    lightdm
+    lightdm-webkit2-greeter
+    xorg-server
     dbus
     curl
+    file
     fontconfig
     adwaita-icon-theme
+    gdk-pixbuf2
+    webkit2gtk
+    ttf-ibm-plex
     inter-font
     ttf-montserrat
-    ttf-ibm-plex
-    ttf-material-symbols-variable
-)
-
-REGREET_REMOVABLE_PACKAGES=(
-    cage
-    greetd-regreet
-    inter-font
-    ttf-montserrat
-    ttf-ibm-plex
     ttf-material-symbols-variable
 )
 
 usage() {
     printf "%s\n" \
-        "Usage: ./arch-config.sh [--all] [--module module] [--restore module] [--help]" \
+        "Usage: ./arch-config.sh [--all] [--module module] [--restore module] [--list-modules] [--help]" \
         "" \
         "Options:" \
-        "  --all              Apply all implemented config modules." \
-        "  --module module    Apply one config module. Currently supported: regreet." \
-        "  --restore module   Restore backups for one module. Currently supported: regreet." \
-        "  --list-modules     List available modules with tags." \
-        "  -h, --help         Show this help."
+        "  --all                Apply all implemented config modules." \
+        "  --module module      Apply one config module. Currently supported: lightdm." \
+        "  --restore module     Restore backups for one module. Currently supported: lightdm." \
+        "  --list-modules       List available modules with tags." \
+        "  --login-user user    User shown/authenticated by the LightDM theme. Default: current user." \
+        "  --login-session ses  Session key used after login. Default: bspwm." \
+        "  -h, --help           Show this help."
 }
 
 list_modules() {
-    local item
-    local module
-    local tags
-    local description
+    local item module tags description
 
     printf "Available modules:\n\n"
-
     for item in "${SUPPORTED_MODULES[@]}"; do
         IFS='|' read -r module tags description <<< "${item}"
         printf "  %s\n" "${module}"
         printf "    tags: %s\n" "${tags}"
         printf "    desc: %s\n\n" "${description}"
     done
+}
+
+module_supported() {
+    [[ $1 == "lightdm" ]]
 }
 
 parse_args() {
@@ -104,6 +105,16 @@ parse_args() {
             --only)
                 die "--only has been removed. Use --module instead."
                 ;;
+            --login-user)
+                [[ $# -ge 2 ]] || die "--login-user requires a username"
+                LIGHTDM_LOGIN_USER="$2"
+                shift 2
+                ;;
+            --login-session)
+                [[ $# -ge 2 ]] || die "--login-session requires a session key"
+                LIGHTDM_LOGIN_SESSION="$2"
+                shift 2
+                ;;
             --list-modules)
                 list_modules
                 exit 0
@@ -128,7 +139,7 @@ parse_args() {
     [[ -n ${MODE} ]] || die "No mode selected"
 
     if [[ ${MODE} != "all" ]]; then
-        [[ ${MODULE} == "regreet" ]] || die "Unsupported module: ${MODULE}"
+        module_supported "${MODULE}" || die "Unsupported module: ${MODULE}"
     fi
 }
 
@@ -142,17 +153,13 @@ ensure_normal_user() {
 }
 
 ensure_sudo() {
-    if ! command -v sudo >/dev/null 2>&1; then
-        die "sudo is required"
-    fi
-
+    command -v sudo >/dev/null 2>&1 || die "sudo is required"
     log "Checking sudo access"
     sudo -v || die "sudo access is required"
 }
 
 check_not_chroot() {
-    local current_root
-    local init_root
+    local current_root init_root
     current_root=$(stat -Lc '%d:%i' / 2>/dev/null || true)
     init_root=$(stat -Lc '%d:%i' /proc/1/root 2>/dev/null || true)
 
@@ -162,8 +169,7 @@ check_not_chroot() {
 }
 
 require_commands() {
-    local missing=()
-    local command_name
+    local missing=() command_name
 
     for command_name in "$@"; do
         command -v "${command_name}" >/dev/null 2>&1 || missing+=("${command_name}")
@@ -202,7 +208,7 @@ preflight() {
     ensure_normal_user
     ensure_sudo
     check_not_chroot
-    require_commands id stat pacman systemctl install cp mkdir rm tee mktemp dirname basename getent
+    require_commands id stat pacman systemctl install cp mkdir rm tee mktemp dirname basename getent grep sed
     ensure_curl
     check_network_to_github
 }
@@ -213,8 +219,8 @@ module_backup_dir() {
 
 module_targets() {
     case "$1" in
-        regreet)
-            printf "%s\n" "${REGREET_FILES[@]}"
+        lightdm)
+            printf "%s\n" "${LIGHTDM_FILES[@]}"
             ;;
         *)
             die "Unsupported module: $1"
@@ -223,10 +229,7 @@ module_targets() {
 }
 
 backup_module() {
-    local module="$1"
-    local module_dir
-    local target
-
+    local module="$1" module_dir target
     module_dir=$(module_backup_dir "${module}")
 
     sudo rm -rf "${module_dir}"
@@ -250,10 +253,7 @@ backup_module() {
 }
 
 restore_module() {
-    local module="$1"
-    local module_dir
-    local target
-
+    local module="$1" module_dir target
     module_dir=$(module_backup_dir "${module}")
     sudo test -d "${module_dir}" || die "No backup directory found for ${module}: ${module_dir}"
 
@@ -275,17 +275,12 @@ restore_module() {
 }
 
 download_file() {
-    local url="$1"
-    local output="$2"
-
+    local url="$1" output="$2"
     curl -fL --connect-timeout 10 --max-time 120 "${url}" -o "${output}"
 }
 
 install_downloaded_root_file() {
-    local relative_path="$1"
-    local target="$2"
-    local mode="$3"
-    local tmp_file
+    local relative_path="$1" target="$2" mode="$3" tmp_file
 
     tmp_file=$(mktemp "${TMP_DIR}/download.XXXXXX")
     download_file "${BASE_RAW_URL}/${relative_path}" "${tmp_file}"
@@ -293,14 +288,28 @@ install_downloaded_root_file() {
     rm -f "${tmp_file}"
 }
 
-install_regreet_packages() {
-    log "Installing ReGreet packages"
-    sudo pacman -S --noconfirm "${REGREET_PACKAGES[@]}"
+install_lightdm_packages() {
+    log "Installing LightDM WebKit greeter packages"
+    sudo pacman -S --needed --noconfirm "${LIGHTDM_PACKAGES[@]}"
 }
 
-install_regreet_wallpaper() {
+validate_lightdm_user_and_session() {
+    LIGHTDM_LOGIN_USER=${LIGHTDM_LOGIN_USER:-${TARGET_USER}}
+
+    [[ ${LIGHTDM_LOGIN_USER} =~ ^[a-z_][a-z0-9_-]*$ ]] || die "Invalid login username: ${LIGHTDM_LOGIN_USER}"
+    getent passwd "${LIGHTDM_LOGIN_USER}" >/dev/null 2>&1 || die "Login user does not exist: ${LIGHTDM_LOGIN_USER}"
+
+    [[ ${LIGHTDM_LOGIN_SESSION} =~ ^[A-Za-z0-9_.@+-]+$ ]] || die "Invalid login session key: ${LIGHTDM_LOGIN_SESSION}"
+    if [[ ! -f /usr/share/xsessions/${LIGHTDM_LOGIN_SESSION}.desktop && ! -f /usr/share/wayland-sessions/${LIGHTDM_LOGIN_SESSION}.desktop ]]; then
+        die "Session file not found for '${LIGHTDM_LOGIN_SESSION}'. Expected /usr/share/xsessions/${LIGHTDM_LOGIN_SESSION}.desktop or /usr/share/wayland-sessions/${LIGHTDM_LOGIN_SESSION}.desktop"
+    fi
+}
+
+install_lightdm_wallpaper() {
     local user_wallpaper_dir="${TARGET_HOME}/Pictures/wallpaper"
     local user_wallpaper="${user_wallpaper_dir}/loginwallpaper.jpg"
+    local system_wallpaper="/usr/share/backgrounds/wallpapers/loginwallpaper.jpg"
+    local theme_wallpaper="/usr/share/lightdm-webkit/themes/arch-scripts/loginwallpaper.jpg"
     local tmp_file
 
     log "Downloading wallpaper"
@@ -309,196 +318,162 @@ install_regreet_wallpaper() {
     tmp_file=$(mktemp "${TMP_DIR}/wallpaper.XXXXXX")
     download_file "${BASE_RAW_URL}/wallpapers/loginwallpaper.jpg" "${tmp_file}"
     install -Dm 0644 "${tmp_file}" "${user_wallpaper}"
-    sudo install -Dm 0644 "${user_wallpaper}" "/usr/share/backgrounds/wallpapers/loginwallpaper.jpg"
-    sudo chmod 0755 /usr/share/backgrounds /usr/share/backgrounds/wallpapers
-    sudo chmod 0644 /usr/share/backgrounds/wallpapers/loginwallpaper.jpg
+    sudo install -Dm 0644 "${user_wallpaper}" "${system_wallpaper}"
+    sudo install -Dm 0644 "${user_wallpaper}" "${theme_wallpaper}"
+    sudo chmod 0755 /usr/share/backgrounds /usr/share/backgrounds/wallpapers /usr/share/lightdm-webkit /usr/share/lightdm-webkit/themes /usr/share/lightdm-webkit/themes/arch-scripts
+    sudo chmod 0644 "${system_wallpaper}" "${theme_wallpaper}"
     rm -f "${tmp_file}"
 }
 
-check_regreet_wallpaper() {
+check_lightdm_wallpaper() {
     local user_wallpaper="${TARGET_HOME}/Pictures/wallpaper/loginwallpaper.jpg"
     local system_wallpaper="/usr/share/backgrounds/wallpapers/loginwallpaper.jpg"
+    local theme_wallpaper="/usr/share/lightdm-webkit/themes/arch-scripts/loginwallpaper.jpg"
+    local file_path mime_type
 
-    [[ -s ${user_wallpaper} ]] || die "Wallpaper missing or empty at ${user_wallpaper}"
-    sudo test -s "${system_wallpaper}" || die "Wallpaper missing or empty at ${system_wallpaper}"
+    for file_path in "${user_wallpaper}" "${system_wallpaper}" "${theme_wallpaper}"; do
+        if [[ ${file_path} == /usr/* ]]; then
+            sudo test -s "${file_path}" || die "Wallpaper missing or empty at ${file_path}"
+            mime_type=$(sudo file -b --mime-type "${file_path}" 2>/dev/null || true)
+        else
+            [[ -s ${file_path} ]] || die "Wallpaper missing or empty at ${file_path}"
+            mime_type=$(file -b --mime-type "${file_path}" 2>/dev/null || true)
+        fi
+
+        case "${mime_type}" in
+            image/jpeg|image/png|image/webp)
+                ;;
+            *)
+                die "Wallpaper at ${file_path} is not a supported image file; detected MIME: ${mime_type:-unknown}"
+                ;;
+        esac
+    done
 }
 
-check_regreet_background_config() {
-    sudo grep -Eq '^[[:space:]]*path[[:space:]]*=[[:space:]]*"/usr/share/backgrounds/wallpapers/loginwallpaper\.jpg"' /etc/greetd/regreet.toml \
-        || die "/etc/greetd/regreet.toml must point background.path to /usr/share/backgrounds/wallpapers/loginwallpaper.jpg"
+write_root_file() {
+    local target="$1" mode="$2" tmp_file
+    tmp_file=$(mktemp "${TMP_DIR}/rootfile.XXXXXX")
+    cat > "${tmp_file}"
+    sudo install -Dm "${mode}" "${tmp_file}" "${target}"
+    rm -f "${tmp_file}"
 }
 
-check_regreet_runtime_access() {
-    local greeter_user="greeter"
-    local greeter_group
-    local system_wallpaper="/usr/share/backgrounds/wallpapers/loginwallpaper.jpg"
+install_lightdm_configs() {
+    log "Installing LightDM config and WebKit theme"
 
-    getent passwd "${greeter_user}" >/dev/null 2>&1 || die "greeter user is missing"
-    greeter_group=$(getent passwd "${greeter_user}" | awk -F: '{ print $4 }')
+    write_root_file "/etc/lightdm/lightdm.conf.d/50-arch-scripts.conf" 0644 <<EOF
+[Seat:*]
+greeter-session=lightdm-webkit2-greeter
+user-session=${LIGHTDM_LOGIN_SESSION}
+EOF
 
-    sudo -u "${greeter_user}" test -r "${system_wallpaper}" \
-        || die "greeter user cannot read ${system_wallpaper}"
+    write_root_file "/etc/lightdm/lightdm-webkit2-greeter.conf" 0644 <<'EOF'
+[greeter]
+webkit-theme=arch-scripts
+debug_mode=false
+EOF
 
-    sudo usermod -aG video,input "${greeter_user}" || true
-    sudo install -d -m 0755 /usr/share/backgrounds/wallpapers
-    sudo chmod 0644 "${system_wallpaper}"
+    install_downloaded_root_file "configs/lightdm-webkit/index.html" "/usr/share/lightdm-webkit/themes/arch-scripts/index.html" 0644
+    install_downloaded_root_file "configs/lightdm-webkit/style.css" "/usr/share/lightdm-webkit/themes/arch-scripts/style.css" 0644
+    install_downloaded_root_file "configs/lightdm-webkit/script.js" "/usr/share/lightdm-webkit/themes/arch-scripts/script.js" 0644
 
-    [[ -n ${greeter_group} ]] || die "Could not determine greeter group"
+    sudo sed -i "s/__ARCH_LOGIN_USER__/${LIGHTDM_LOGIN_USER}/g; s/__ARCH_LOGIN_SESSION__/${LIGHTDM_LOGIN_SESSION}/g" "/usr/share/lightdm-webkit/themes/arch-scripts/script.js"
 }
 
-verify_regreet_fonts() {
+lightdm_module_present() {
+    command -v lightdm >/dev/null 2>&1 \
+        || command -v lightdm-webkit2-greeter >/dev/null 2>&1 \
+        || sudo test -e /etc/lightdm/lightdm.conf.d/50-arch-scripts.conf \
+        || sudo test -e /etc/lightdm/lightdm-webkit2-greeter.conf \
+        || sudo test -e /usr/share/lightdm-webkit/themes/arch-scripts
+}
+
+reset_lightdm_module_files() {
+    log "Removing existing LightDM module files before reinstall"
+    sudo rm -rf /usr/share/lightdm-webkit/themes/arch-scripts
+    sudo rm -f /etc/lightdm/lightdm.conf.d/50-arch-scripts.conf /etc/lightdm/lightdm-webkit2-greeter.conf
+}
+
+disable_old_greetd() {
+    log "Disabling old greetd service if present"
+    sudo systemctl disable greetd.service >/dev/null 2>&1 || true
+}
+
+remove_old_regreet_packages() {
+    local old_packages=(greetd-regreet greetd-tuigreet cage greetd)
+    local installed=() package
+
+    for package in "${old_packages[@]}"; do
+        if pacman -Qq "${package}" >/dev/null 2>&1; then
+            installed+=("${package}")
+        fi
+    done
+
+    if [[ ${#installed[@]} -gt 0 ]]; then
+        log "Removing old greetd/ReGreet packages: ${installed[*]}"
+        sudo pacman -Rns --noconfirm "${installed[@]}" || log "Some old packages could not be removed because other packages still require them"
+    fi
+}
+
+verify_lightdm_fonts() {
     require_commands fc-match fc-cache
-
-    fc-match Inter >/dev/null 2>&1 || die "Inter font is not available"
-    fc-match Montserrat >/dev/null 2>&1 || die "Montserrat font is not available"
     fc-match "IBM Plex Sans" >/dev/null 2>&1 || die "IBM Plex Sans font is not available"
+    fc-match "Inter" >/dev/null 2>&1 || die "Inter font is not available"
+    fc-match "Montserrat" >/dev/null 2>&1 || die "Montserrat font is not available"
     fc-match "Material Symbols Outlined" >/dev/null 2>&1 || die "Material Symbols Outlined font is not available"
     sudo fc-cache -f >/dev/null 2>&1 || true
 }
 
-configure_regreet_skip_selection() {
-    local regreet_user
-    local regreet_session
-    local state_file="/var/lib/regreet/state.toml"
+verify_lightdm() {
+    log "Verifying LightDM setup"
+    require_commands lightdm lightdm-webkit2-greeter
 
-    read -rp "ReGreet skip-selection username [${TARGET_USER}]: " regreet_user
-    regreet_user=${regreet_user:-${TARGET_USER}}
+    sudo test -f /etc/lightdm/lightdm.conf.d/50-arch-scripts.conf || die "LightDM seat config is missing"
+    sudo test -f /etc/lightdm/lightdm-webkit2-greeter.conf || die "LightDM WebKit greeter config is missing"
+    sudo test -f /usr/share/lightdm-webkit/themes/arch-scripts/index.html || die "Theme index.html is missing"
+    sudo test -f /usr/share/lightdm-webkit/themes/arch-scripts/style.css || die "Theme style.css is missing"
+    sudo test -f /usr/share/lightdm-webkit/themes/arch-scripts/script.js || die "Theme script.js is missing"
+    check_lightdm_wallpaper
+    verify_lightdm_fonts
 
-    if [[ ! ${regreet_user} =~ ^[a-z_][a-z0-9_-]*$ ]]; then
-        die "Invalid username for ReGreet state: ${regreet_user}"
-    fi
-
-    getent passwd "${regreet_user}" >/dev/null 2>&1 || die "User does not exist: ${regreet_user}"
-
-    read -rp "ReGreet remembered session key [bspwm]: " regreet_session
-    regreet_session=${regreet_session:-bspwm}
-
-    if [[ ! ${regreet_session} =~ ^[A-Za-z0-9_.@+-]+$ ]]; then
-        die "Invalid session key for ReGreet state: ${regreet_session}"
-    fi
-
-    if [[ ! -f /usr/share/xsessions/${regreet_session}.desktop && ! -f /usr/share/wayland-sessions/${regreet_session}.desktop ]]; then
-        log "Session desktop file not found for '${regreet_session}'. ReGreet may ignore skip-selection until a valid session is remembered."
-    fi
-
-    sudo install -d -m 0755 /var/lib/regreet
-    {
-        printf 'last_user = "%s"\n\n' "${regreet_user}"
-        printf '[user_to_last_sess]\n'
-        printf '"%s" = "%s"\n' "${regreet_user}" "${regreet_session}"
-    } | sudo tee "${state_file}" >/dev/null
-
-    if getent passwd greeter >/dev/null 2>&1; then
-        sudo chown -R greeter:greeter /var/lib/regreet
-    fi
-    sudo chmod 0644 "${state_file}"
+    sudo grep -q 'greeter-session=lightdm-webkit2-greeter' /etc/lightdm/lightdm.conf.d/50-arch-scripts.conf \
+        || die "LightDM is not configured to use lightdm-webkit2-greeter"
+    sudo grep -q 'webkit-theme=arch-scripts' /etc/lightdm/lightdm-webkit2-greeter.conf \
+        || die "LightDM WebKit greeter is not configured to use arch-scripts theme"
 }
 
-install_regreet_configs() {
-    log "Downloading and installing ReGreet configs"
-    install_downloaded_root_file "configs/regreet/config.toml" "/etc/greetd/config.toml" 0644
-    install_downloaded_root_file "configs/regreet/regreet.toml" "/etc/greetd/regreet.toml" 0644
-    install_downloaded_root_file "configs/regreet/regreet.css" "/etc/greetd/regreet.css" 0644
+enable_lightdm() {
+    log "Enabling LightDM"
+    sudo systemctl enable lightdm.service >/dev/null
+    sudo systemctl is-enabled --quiet lightdm.service || die "lightdm.service is not enabled"
 }
 
-regreet_is_setup() {
-    command -v regreet >/dev/null 2>&1 \
-        && command -v cage >/dev/null 2>&1 \
-        && command -v dbus-run-session >/dev/null 2>&1 \
-        && pacman -Qq fontconfig >/dev/null 2>&1 \
-        && pacman -Qq adwaita-icon-theme >/dev/null 2>&1 \
-        && pacman -Qq inter-font >/dev/null 2>&1 \
-        && pacman -Qq ttf-montserrat >/dev/null 2>&1 \
-        && pacman -Qq ttf-ibm-plex >/dev/null 2>&1 \
-        && pacman -Qq ttf-material-symbols-variable >/dev/null 2>&1 \
-        && sudo test -f /usr/share/backgrounds/wallpapers/loginwallpaper.jpg \
-        && sudo test -f /var/lib/regreet/state.toml \
-        && [[ -f "${TARGET_HOME}/Pictures/wallpaper/loginwallpaper.jpg" ]] \
-        && sudo test -f /etc/greetd/config.toml \
-        && sudo test -f /etc/greetd/regreet.toml \
-        && sudo test -f /etc/greetd/regreet.css \
-        && ! pacman -Qq greetd-tuigreet >/dev/null 2>&1
-}
-
-regreet_module_present() {
-    command -v regreet >/dev/null 2>&1 \
-        || command -v cage >/dev/null 2>&1 \
-        || pacman -Qq greetd-regreet >/dev/null 2>&1 \
-        || sudo test -e /etc/greetd/regreet.toml \
-        || sudo test -e /etc/greetd/regreet.css \
-        || sudo test -e /usr/share/backgrounds/wallpapers/loginwallpaper.jpg
-}
-
-verify_regreet() {
-    log "Verifying ReGreet setup"
-
-    require_commands regreet cage dbus-run-session
-
-    sudo test -f /etc/greetd/config.toml || die "/etc/greetd/config.toml is missing"
-    sudo test -f /etc/greetd/regreet.toml || die "/etc/greetd/regreet.toml is missing"
-    sudo test -f /etc/greetd/regreet.css || die "/etc/greetd/regreet.css is missing"
-    check_regreet_wallpaper
-    check_regreet_background_config
-    check_regreet_runtime_access
-    verify_regreet_fonts
-
-    sudo systemctl enable greetd.service >/dev/null
-    sudo systemctl is-enabled --quiet greetd.service || die "greetd.service is not enabled"
-}
-
-remove_tuigreet() {
-    if pacman -Qq greetd-tuigreet >/dev/null 2>&1; then
-        log "Removing greetd-tuigreet"
-        sudo pacman -Rns --noconfirm greetd-tuigreet
-    else
-        log "greetd-tuigreet is not installed; skipping removal"
-    fi
-}
-
-uninstall_regreet_module() {
-    local package
-
-    log "Removing existing ReGreet module files"
-    sudo rm -f \
-        /etc/greetd/config.toml \
-        /etc/greetd/regreet.toml \
-        /etc/greetd/regreet.css \
-        /usr/share/backgrounds/wallpapers/loginwallpaper.jpg \
-        /var/lib/regreet/state.toml
-
-    log "Removing existing ReGreet module packages where possible"
-    for package in "${REGREET_REMOVABLE_PACKAGES[@]}"; do
-        if pacman -Qq "${package}" >/dev/null 2>&1; then
-            sudo pacman -Rns --noconfirm "${package}" \
-                || log "Could not remove ${package}; it may be required by another package"
-        fi
-    done
-}
-
-apply_regreet() {
+apply_lightdm() {
     sudo mkdir -p "${STATE_DIR}" "${BACKUP_DIR}"
     rm -rf "${TMP_DIR}"
     mkdir -p "${TMP_DIR}"
 
-    backup_module regreet
+    validate_lightdm_user_and_session
+    backup_module lightdm
 
-    if regreet_module_present; then
-        log "Existing ReGreet module state detected; rebuilding from current configs"
-        uninstall_regreet_module
+    if lightdm_module_present; then
+        log "Existing LightDM module state detected; reinstalling owned files from current configs"
+        reset_lightdm_module_files
     fi
 
-    install_regreet_packages
-    install_regreet_wallpaper
-    install_regreet_configs
-    configure_regreet_skip_selection
-    verify_regreet
-    remove_tuigreet
+    disable_old_greetd
+    install_lightdm_packages
+    install_lightdm_wallpaper
+    install_lightdm_configs
+    verify_lightdm
+    remove_old_regreet_packages
+    enable_lightdm
 
-    log "ReGreet module applied"
+    log "LightDM module applied"
 }
 
 apply_all() {
-    apply_regreet
+    apply_lightdm
 }
 
 main() {
@@ -519,8 +494,8 @@ main() {
             ;;
         module)
             case "${MODULE}" in
-                regreet)
-                    apply_regreet
+                lightdm)
+                    apply_lightdm
                     ;;
                 *)
                     die "Unsupported module: ${MODULE}"
@@ -533,12 +508,8 @@ main() {
     esac
 
     log "Config setup complete"
-    echo "Reboot to see the updated greeter:"
+    echo "Reboot to see the updated LightDM greeter:"
     echo "  sudo reboot"
 }
 
 main "$@"
-
-
-
-

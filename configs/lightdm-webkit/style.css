@@ -1,0 +1,310 @@
+@font-face {
+    font-family: "Material Symbols Outlined";
+    src: local("Material Symbols Outlined");
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    font-family: "Inter", "IBM Plex Sans", "Montserrat", sans-serif;
+    color: #e8fbff;
+    background: #02080a;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background:
+        linear-gradient(90deg, rgba(0, 12, 14, 0.72), rgba(0, 14, 18, 0.55), rgba(8, 3, 7, 0.76)),
+        linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.42)),
+        url("./loginwallpaper.jpg") center / cover no-repeat;
+    transform: scale(1.02);
+}
+
+.screen {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: 72px minmax(170px, 1fr) auto minmax(90px, 1fr) 84px;
+    justify-items: center;
+    padding: 20px 38px;
+}
+
+.topbar {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #d8e5e8;
+    font-size: 17px;
+    letter-spacing: 0;
+}
+
+.system-pill {
+    opacity: 0.78;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 12px;
+}
+
+.text-button,
+.power-button,
+.icon-button,
+.session-button,
+.login-button {
+    border: 0;
+    color: inherit;
+    font: inherit;
+    background: transparent;
+}
+
+.text-button {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 0;
+    color: rgba(232, 251, 255, 0.82);
+}
+
+.clock-card {
+    grid-row: 2;
+    align-self: end;
+    min-width: 350px;
+    padding: 36px 48px 34px;
+    border: 1px solid rgba(91, 228, 214, 0.20);
+    border-radius: 28px;
+    background: rgba(5, 11, 13, 0.42);
+    box-shadow: 0 0 44px rgba(0, 217, 213, 0.10), inset 0 0 32px rgba(255, 229, 205, 0.04);
+    text-align: center;
+    backdrop-filter: blur(16px);
+}
+
+.time {
+    color: #18e3df;
+    font-family: "IBM Plex Sans", "Inter", sans-serif;
+    font-size: 104px;
+    font-weight: 800;
+    line-height: 0.88;
+    text-shadow: 0 0 22px rgba(24, 227, 223, 0.28), 0 2px 0 rgba(0, 0, 0, 0.55);
+}
+
+.date {
+    margin-top: 20px;
+    color: #ffd5ba;
+    font-size: 30px;
+    font-weight: 700;
+    text-shadow: 0 0 18px rgba(255, 213, 186, 0.35);
+}
+
+.login-card {
+    grid-row: 3;
+    width: min(520px, calc(100vw - 48px));
+    padding: 36px 40px 28px;
+    border: 1px solid rgba(220, 255, 251, 0.92);
+    border-radius: 26px;
+    background: rgba(12, 14, 16, 0.56);
+    box-shadow: 0 0 36px rgba(11, 247, 231, 0.08), inset 0 0 52px rgba(255, 240, 220, 0.05);
+    backdrop-filter: blur(18px);
+}
+
+.avatar {
+    width: 86px;
+    height: 86px;
+    margin: 0 auto 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    border: 1px solid rgba(82, 230, 219, 0.45);
+    background: rgba(255, 255, 255, 0.14);
+    box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.20);
+}
+
+.avatar .material-symbols-outlined {
+    font-size: 48px;
+    color: #dffcff;
+}
+
+.hidden-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+label {
+    display: block;
+    margin: 0 0 12px 6px;
+    color: #ffd1ad;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+}
+
+.password-row {
+    display: grid;
+    grid-template-columns: 1fr 52px;
+    height: 60px;
+    border: 1px solid rgba(145, 185, 201, 0.24);
+    border-radius: 10px;
+    background: rgba(2, 5, 8, 0.62);
+    overflow: hidden;
+}
+
+.password-row:focus-within {
+    border-color: #18e3df;
+    box-shadow: 0 0 0 2px rgba(24, 227, 223, 0.26), 0 0 24px rgba(24, 227, 223, 0.16);
+}
+
+input {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    color: #e9fbff;
+    background: transparent;
+    font-size: 22px;
+    padding: 0 20px;
+}
+
+input::placeholder {
+    color: rgba(221, 235, 240, 0.62);
+}
+
+.icon-button {
+    display: grid;
+    place-items: center;
+    color: rgba(223, 244, 248, 0.72);
+}
+
+.login-button {
+    width: 100%;
+    height: 68px;
+    margin-top: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    border-radius: 10px;
+    color: #063d45;
+    background: linear-gradient(180deg, #22d7df, #12bac8);
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    box-shadow: 0 16px 32px rgba(3, 189, 199, 0.18);
+}
+
+.login-button:disabled {
+    opacity: 0.58;
+}
+
+.session-row {
+    margin-top: 28px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(233, 252, 255, 0.08);
+}
+
+.session-button {
+    display: inline-flex;
+    gap: 10px;
+    align-items: center;
+    min-height: 44px;
+    color: #aebdca;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.message {
+    min-height: 22px;
+    margin-top: 10px;
+    color: #ffd1ad;
+    font-size: 13px;
+    text-align: center;
+}
+
+.power-row {
+    grid-row: 5;
+    align-self: end;
+    display: flex;
+    gap: 64px;
+    align-items: center;
+}
+
+.power-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: rgba(238, 249, 251, 0.86);
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+
+.material-symbols-outlined {
+    font-family: "Material Symbols Outlined";
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: 0;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    direction: ltr;
+    -webkit-font-feature-settings: "liga";
+    -webkit-font-smoothing: antialiased;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+button {
+    cursor: pointer;
+}
+
+button:focus-visible,
+input:focus-visible {
+    outline: 2px solid #18e3df;
+    outline-offset: 3px;
+}
+
+@media (max-height: 820px) {
+    .screen {
+        grid-template-rows: 54px minmax(130px, 0.75fr) auto minmax(42px, 0.5fr) 64px;
+        padding-top: 12px;
+    }
+
+    .clock-card {
+        padding: 22px 36px;
+    }
+
+    .time {
+        font-size: 76px;
+    }
+
+    .date {
+        font-size: 24px;
+        margin-top: 14px;
+    }
+
+    .login-card {
+        padding: 26px 34px 22px;
+    }
+
+    .avatar {
+        width: 66px;
+        height: 66px;
+        margin-bottom: 20px;
+    }
+}

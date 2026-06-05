@@ -38,8 +38,8 @@ BASE_PACKAGES=(
     sxhkd
     polybar
     picom
-    greetd
-    greetd-tuigreet
+    lightdm
+    lightdm-webkit2-greeter
     alacritty
     rofi
     dunst
@@ -153,7 +153,7 @@ phase_targets() {
     case "$1" in
         phase5)
             printf "%s\n" \
-                "/etc/greetd/config.toml" \
+                "/etc/lightdm/lightdm.conf.d/50-arch-scripts.conf" \
                 "${TARGET_HOME}/.xinitrc" \
                 "${TARGET_HOME}/.config/bspwm/bspwmrc" \
                 "${TARGET_HOME}/.config/sxhkd/sxhkdrc"
@@ -522,8 +522,10 @@ install_packages() {
 }
 
 enable_services_and_user_setup() {
-    log "Enabling greetd"
-    sudo systemctl enable greetd.service
+    log "Disabling old greetd service if present"
+    sudo systemctl disable greetd.service >/dev/null 2>&1 || true
+
+    log "Leaving LightDM enablement to arch-config.sh after theme installation"
 
     log "Enabling Bluetooth"
     sudo systemctl enable --now bluetooth.service || log "Failed to enable/start bluetooth.service"
@@ -558,14 +560,10 @@ write_root_file() {
 }
 
 write_configs() {
-    log "Writing greetd configuration"
-    write_root_file "/etc/greetd/config.toml" 0644 <<'EOF'
-[terminal]
-vt = 1
-
-[default_session]
-command = "tuigreet --remember --time --cmd startx"
-user = "greeter"
+    log "Writing LightDM BSPWM session hint"
+    write_root_file "/etc/lightdm/lightdm.conf.d/50-arch-scripts.conf" 0644 <<'EOF'
+[Seat:*]
+user-session=bspwm
 EOF
 
     log "Writing .xinitrc"
@@ -747,7 +745,7 @@ main() {
     done
 
     log "BSPWM desktop setup complete"
-    echo "Reboot, then log in through tuigreet."
+    echo "Run ./arch-config.sh --module lightdm before rebooting to install and enable the LightDM greeter theme."
 }
 
 main "$@"

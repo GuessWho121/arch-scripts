@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Arch Scripts Login</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="screen">
+        <header class="topbar">
+            <button class="text-button" id="settingsButton" type="button">
+                <span class="material-symbols-outlined">settings</span>
+                <span>settings</span>
+            </button>
+            <div class="system-pill" id="hostLabel">arch</div>
+            <button class="text-button" id="languageButton" type="button">
+                <span>language</span>
+            </button>
+        </header>
+
+        <section class="clock-card" aria-label="Current time">
+            <div id="timeLabel" class="time">00:00</div>
+            <div id="dateLabel" class="date">Friday, June 5</div>
+        </section>
+
+        <section class="login-card" aria-label="Login form">
+            <div class="avatar" aria-hidden="true">
+                <span class="material-symbols-outlined">person</span>
+            </div>
+
+            <form id="loginForm" autocomplete="off">
+                <input id="username" class="hidden-input" type="text" autocomplete="username">
+
+                <label for="password">Secure Password</label>
+                <div class="password-row">
+                    <input id="password" type="password" placeholder="Password" autocomplete="current-password" autofocus>
+                    <button id="togglePassword" class="icon-button" type="button" aria-label="Show password">
+                        <span class="material-symbols-outlined">visibility_off</span>
+                    </button>
+                </div>
+
+                <button class="login-button" id="loginButton" type="submit">
+                    <span>Login</span>
+                    <span class="material-symbols-outlined">arrow_forward</span>
+                </button>
+            </form>
+
+            <div class="session-row">
+                <button class="session-button" id="sessionButton" type="button">
+                    <span class="material-symbols-outlined">desktop_windows</span>
+                    <span id="sessionLabel">BSPWM</span>
+                    <span class="material-symbols-outlined">expand_more</span>
+                </button>
+            </div>
+
+            <div class="message" id="message" role="status"></div>
+        </section>
+
+        <footer class="power-row">
+            <button id="restartButton" class="power-button" type="button">
+                <span class="material-symbols-outlined">restart_alt</span>
+                <span>Reboot</span>
+            </button>
+            <button id="powerButton" class="power-button" type="button">
+                <span class="material-symbols-outlined">power_settings_new</span>
+                <span>Power Off</span>
+            </button>
+        </footer>
+    </main>
+    <script src="script.js"></script>
+</body>
+</html>
