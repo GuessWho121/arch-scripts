@@ -450,8 +450,18 @@ install_yay() {
     [[ ${EUID:-$(id -u)} -ne 0 ]] || die "makepkg cannot build yay as root; run this script as your normal sudo user"
 
     log "Installing yay build dependencies"
-    sudo pacman -Syu --needed --noconfirm git base-devel go fakeroot debugedit
-    require_commands git makepkg tee
+    sudo pacman -Syu --needed --noconfirm git base-devel fakeroot debugedit
+    sudo pacman -S --noconfirm go
+    require_commands git makepkg tee go
+
+    if ! env -u GOROOT -u GOPATH -u GOFLAGS go list std >/dev/null 2>&1; then
+        log "Go standard library validation failed; reinstalling go"
+        sudo pacman -S --noconfirm go
+        if ! env -u GOROOT -u GOPATH -u GOFLAGS go list std >/dev/null 2>&1; then
+            sudo pacman -Qkk go || true
+            die "Go installation is broken. Check pacman output above and reinstall go before building yay."
+        fi
+    fi
 
     sudo rm -rf -- "${yay_dir}"
     install -d -m 700 "${build_root}"
@@ -463,7 +473,7 @@ install_yay() {
 
     log "Building and installing yay"
     sudo -v
-    if ! (cd "${yay_dir}" && makepkg -si --needed --noconfirm --cleanbuild 2>&1 | tee "${yay_log}"); then
+    if ! (cd "${yay_dir}" && env -u GOROOT -u GOPATH -u GOFLAGS makepkg -si --needed --noconfirm --cleanbuild 2>&1 | tee "${yay_log}"); then
         log "yay build failed. Build log: ${yay_log}"
         die "Failed to build/install yay"
     fi
@@ -719,6 +729,7 @@ main() {
 }
 
 main "$@"
+
 
 
 
