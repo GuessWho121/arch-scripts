@@ -439,20 +439,30 @@ print_system_summary() {
 install_yay() {
     if command -v yay >/dev/null 2>&1; then
         log "yay already installed"
+        yay --version >/dev/null 2>&1 || die "yay exists but failed to run"
         return 0
     fi
 
-    sudo pacman -Syu --needed --noconfirm git base-devel
+    [[ ${EUID:-$(id -u)} -ne 0 ]] || die "makepkg cannot build yay as root; run this script as your normal sudo user"
+
+    log "Installing yay build dependencies"
+    sudo pacman -Syu --needed --noconfirm git base-devel go
     require_commands git makepkg
 
-    mkdir -p "${TMP_DIR}"
-    rm -rf "${TMP_DIR}/yay"
+    sudo rm -rf -- "${TMP_DIR}/yay"
+    sudo mkdir -p "${TMP_DIR}"
+    sudo chown "${TARGET_USER}:$(id -gn)" "${TMP_DIR}"
+    chmod 700 "${TMP_DIR}"
 
     log "Cloning yay from AUR"
     git clone https://aur.archlinux.org/yay.git "${TMP_DIR}/yay"
 
     log "Building and installing yay"
+    sudo -v
     (cd "${TMP_DIR}/yay" && makepkg -si --noconfirm)
+
+    command -v yay >/dev/null 2>&1 || die "yay installation finished but yay was not found in PATH"
+    yay --version >/dev/null 2>&1 || die "yay installed but failed to run"
 }
 
 install_packages() {
@@ -695,3 +705,4 @@ main() {
 }
 
 main "$@"
+
