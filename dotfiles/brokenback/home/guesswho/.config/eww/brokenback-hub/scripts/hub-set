@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+set -eu
+
+export PATH="/home/guesswho/.local/bin:$PATH"
+
+target="${1:-}"
+
+raw_value="${2:-0}"
+
+case "$target" in
+  volume)
+    value="$(awk -v v="$raw_value" 'BEGIN { if (v < 0) v = 0; if (v > 100) v = 100; printf "%d", v }')"
+    wpctl set-volume @DEFAULT_AUDIO_SINK@ "${value}%" >/dev/null 2>&1 || true
+    ;;
+  brightness)
+    value="$(awk -v v="$raw_value" 'BEGIN { if (v < 1) v = 1; if (v > 100) v = 100; printf "%d", v }')"
+    brightnessctl set "${value}%" >/dev/null 2>&1 || true
+    ;;
+esac

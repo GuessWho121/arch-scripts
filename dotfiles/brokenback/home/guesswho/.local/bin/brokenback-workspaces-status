@@ -1,0 +1,189 @@
+#!/usr/bin/env sh
+set -eu
+
+focused_color="#7ddfe8"
+occupied_color="#dce8e6"
+empty_color="#879692"
+ink_color="#101418"
+
+generic_icon=""
+empty_icon=""
+focused_dot=""
+
+desktop_names="$(bspc query -D --names 2>/dev/null || printf 'I\nII\nIII\nIV\nV\nVI\nVII\nVIII\nIX\nX\n')"
+focused_desktop="$(bspc query -D -d focused --names 2>/dev/null || printf '')"
+min_visible=3
+focused_index="$min_visible"
+
+i=0
+for desktop in $desktop_names; do
+  i=$((i + 1))
+  if [ "$desktop" = "$focused_desktop" ]; then
+    [ "$i" -gt "$focused_index" ] && focused_index="$i"
+    break
+  fi
+done
+
+max_visible_index() {
+  i=0
+  max="$focused_index"
+  for desktop in $desktop_names; do
+    i=$((i + 1))
+    nodes="$(bspc query -N -d "$desktop" -n .window 2>/dev/null || true)"
+    if [ -n "$nodes" ] && [ "$i" -gt "$max" ]; then
+      max="$i"
+    fi
+  done
+  printf '%s\n' "$max"
+}
+
+visible_desktops() {
+  i=0
+  max="$(max_visible_index)"
+  for desktop in $desktop_names; do
+    i=$((i + 1))
+    if [ "$i" -le "$max" ]; then
+      printf '%s\n' "$desktop"
+    fi
+  done
+}
+
+visible_count() {
+  visible_desktops | sed '/^$/d' | wc -l | tr -d ' '
+}
+
+if [ "${1:-}" = "--count" ]; then
+  visible_count
+  exit 0
+fi
+
+class_for_node() {
+  xprop -id "$1" WM_CLASS 2>/dev/null | awk -F\" 'NF >= 4 { print $(NF - 1); exit }'
+}
+
+is_terminal_class() {
+  case "$1" in
+    alacritty|kitty|xterm|st|st-256color|wezterm|foot|urxvt|rxvt|gnome-terminal|konsole|xfce4-terminal)
+      return 0
+      ;;
+  esac
+  return 1
+}
+
+icon_for_class() {
+  case "$1" in
+    firefox|librewolf|navigator)
+      printf '󰈹'
+      ;;
+    thunar|pcmanfm|nautilus|dolphin|org.gnome.nautilus|ranger)
+      printf ''
+      ;;
+    code|code-oss|vscodium|neovide|gvim|nvim|neovim|jetbrains-*)
+      printf ''
+      ;;
+    btop|htop|missioncenter|org.gnome.systemmonitor)
+      printf '󰨇'
+      ;;
+    rofi|pavucontrol|blueman-manager|lxappearance|qt5ct|qt6ct|kvantummanager|flameshot)
+      printf ''
+      ;;
+    *)
+      printf '%s' "$generic_icon"
+      ;;
+  esac
+}
+
+get_tui_app() {
+  term_pid="$1"
+  [ -n "$term_pid" ] || return 1
+  
+  # Check direct children and grandchildren recursively
+  children="$(pgrep -P "$term_pid" 2>/dev/null || true)"
+  for child in $children; do
+    comm="$(cat "/proc/$child/comm" 2>/dev/null || true)"
+    if [ "$comm" = "nvim" ] || [ "$comm" = "neovim" ] || [ "$comm" = "nmtui" ]; then
+      echo "$comm"
+      return 0
+    fi
+    grandchildren="$(pgrep -P "$child" 2>/dev/null || true)"
+    for gchild in $grandchildren; do
+      gcomm="$(cat "/proc/$gchild/comm" 2>/dev/null || true)"
+      if [ "$gcomm" = "nvim" ] || [ "$gcomm" = "neovim" ] || [ "$gcomm" = "nmtui" ]; then
+        echo "$gcomm"
+        return 0
+      fi
+    done
+  done
+  return 1
+}
+
+workspace_icon() {
+  desktop="$1"
+  nodes="$(bspc query -N -d "$desktop" -n .window 2>/dev/null || true)"
+  [ -n "$nodes" ] || {
+    printf '%s' "$empty_icon"
+    return
+  }
+
+  terminal_nodes=""
+  for node in $nodes; do
+    class="$(class_for_node "$node" | tr '[:upper:]' '[:lower:]')"
+    [ -n "$class" ] || continue
+    if is_terminal_class "$class"; then
+      terminal_nodes="$terminal_nodes $node"
+    else
+      icon_for_class "$class"
+      return
+    fi
+  done
+
+  # If only terminal windows are open on this workspace, search for TUI processes
+  for term_node in $terminal_nodes; do
+    term_pid="$(xprop -id "$term_node" _NET_WM_PID 2>/dev/null | awk '{print $3}' || true)"
+    if [ -n "$term_pid" ]; then
+      tui="$(get_tui_app "$term_pid" || true)"
+      if [ "$tui" = "nvim" ] || [ "$tui" = "neovim" ]; then
+        printf ''
+        return
+      elif [ "$tui" = "nmtui" ]; then
+        printf '󰖩'
+        return
+      fi
+    fi
+  done
+
+  # Otherwise, output terminal symbol
+  printf ''
+}
+
+# Generate output string with spacing and no per-workspace rounded highlight.
+output=""
+visible_names="$(visible_desktops)"
+
+for desktop in $visible_names; do
+  icon="$(workspace_icon "$desktop")"
+  
+  if [ "$desktop" = "$focused_desktop" ]; then
+    if [ "$icon" = "$empty_icon" ]; then
+      icon="$focused_dot"
+    fi
+    item="%{F${focused_color}}%{T3}${icon}%{T-}%{F-}"
+  else
+    color="$occupied_color"
+    if [ "$icon" = "$empty_icon" ]; then
+      color="$empty_color"
+    fi
+    item="%{F${color}}%{T3}${icon}%{T-}%{F-}"
+  fi
+  
+  # Wrap in individual click actions
+  wrapped_item="%{A1:bspc desktop -f ${desktop}:}${item}%{A}"
+  
+  if [ -z "$output" ]; then
+    output=" ${wrapped_item}"
+  else
+    output="${output}  ${wrapped_item}"
+  fi
+done
+
+printf '%s \n' "$output"

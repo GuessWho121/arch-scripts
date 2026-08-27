@@ -1,0 +1,28 @@
+#!/usr/bin/env sh
+set -eu
+
+battery="${BROKENBACK_BATTERY:-/sys/class/power_supply/BAT0}"
+
+if [ ! -r "$battery/capacity" ]; then
+  printf '%%{T3}󰂑%%{T-} n/a\n'
+  exit 0
+fi
+
+capacity="$(cat "$battery/capacity")"
+state="$(cat "$battery/status" 2>/dev/null || printf 'Unknown')"
+
+case "$state" in
+  Charging) icon='󰂄' ;;
+  Full) icon='󰁹' ;;
+  Not\ charging) icon='󰂃' ;;
+  Discharging)
+    if [ "$capacity" -le 15 ]; then icon='󰁺'
+    elif [ "$capacity" -le 35 ]; then icon='󰁼'
+    elif [ "$capacity" -le 65 ]; then icon='󰁿'
+    else icon='󰁹'
+    fi
+    ;;
+  *) icon='󰂑' ;;
+esac
+
+printf '%%{T3}%s%%{T-} %s%%\n' "$icon" "$capacity"

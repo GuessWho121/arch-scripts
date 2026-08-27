@@ -1,0 +1,538 @@
+* {
+  all: unset;
+  font-family: "SpaceMono Nerd Font Mono";
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.bb-icon {
+  font-family: "Symbols Nerd Font Mono", "SpaceMono Nerd Font Mono";
+  font-size: 28px;
+  font-weight: 700;
+  min-width: 30px;
+  min-height: 30px;
+}
+
+.rofi-blur-layer {
+  background: rgba(7, 11, 13, 0.50);
+}
+
+.media-island {
+  background: rgba(16, 20, 24, 0.92);
+  color: #dce8e6;
+  border: 1px solid rgba(125, 223, 232, 0.38);
+  border-radius: 22px;
+  padding: 4px 12px 3px 12px;
+  transition: 250ms ease;
+  animation: media-rise 260ms ease-out;
+}
+
+.media-island.playing {
+  border-color: rgba(125, 223, 232, 0.72);
+}
+
+.media-island.paused {
+  border-color: rgba(255, 176, 138, 0.62);
+}
+
+.media-row {
+  min-height: 30px;
+}
+
+.media-icon {
+  color: #7ddfe8;
+  font-size: 23px;
+  min-width: 30px;
+  margin-right: 8px;
+}
+
+.media-copy {
+  margin-top: 1px;
+}
+
+.media-title {
+  color: #dce8e6;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.media-artist {
+  color: #879692;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.media-progress trough {
+  background: rgba(135, 150, 146, 0.18);
+  border-radius: 999px;
+  min-height: 3px;
+  margin: 1px 34px 0 38px;
+}
+
+.media-progress trough highlight {
+  background: #7ddfe8;
+  border-radius: 999px;
+  min-height: 3px;
+}
+
+.media-progress slider {
+  background: transparent;
+  min-width: 0px;
+  min-height: 0px;
+}
+
+.media-popup {
+  background: rgba(16, 20, 24, 0.97);
+  color: #dce8e6;
+  border: 1px solid rgba(125, 223, 232, 0.38);
+  border-radius: 24px;
+  padding: 18px;
+  transition: 250ms ease;
+  animation: media-rise 260ms ease-out;
+}
+
+.media-popup.paused {
+  border-color: rgba(255, 176, 138, 0.62);
+}
+
+.media-popup-top {
+  margin-bottom: 16px;
+}
+
+.media-art-frame {
+  background: rgba(31, 40, 45, 0.9);
+  border: 1px solid rgba(125, 223, 232, 0.24);
+  border-radius: 18px;
+  padding: 0;
+  margin-right: 16px;
+}
+
+.media-art {
+  border-radius: 18px;
+}
+
+.media-popup-copy {
+  margin-top: 6px;
+}
+
+.media-popup-title {
+  color: #7ddfe8;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.media-popup-artist {
+  color: #dce8e6;
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 8px;
+}
+
+.media-popup-album {
+  color: #879692;
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 5px;
+}
+
+.media-popup-close {
+  background: rgba(39, 50, 56, 0.9);
+  color: #ff7a90;
+  border-radius: 50%;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  margin-left: 12px;
+}
+
+.media-popup-close-icon {
+  font-size: 24px;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.media-popup-close:hover {
+  background: #ff7a90;
+  color: #101418;
+}
+
+.media-time-row {
+  margin-top: 2px;
+}
+
+.media-time {
+  color: #879692;
+  font-size: 11px;
+  min-width: 42px;
+}
+
+.media-popup-progress trough {
+  background: rgba(135, 150, 146, 0.18);
+  border-radius: 999px;
+  min-height: 8px;
+  margin: 3px 10px 0 10px;
+}
+
+.media-popup-progress trough highlight {
+  background: #7ddfe8;
+  border-radius: 999px;
+  min-height: 8px;
+}
+
+.media-popup-progress slider {
+  background: transparent;
+  min-width: 0px;
+  min-height: 0px;
+}
+
+.media-popup-controls {
+  margin-top: 18px;
+}
+
+.media-control-btn {
+  background: rgba(31, 40, 45, 0.9);
+  color: #dce8e6;
+  border: 1px solid rgba(125, 223, 232, 0.22);
+  border-radius: 50%;
+  min-width: 50px;
+  min-height: 50px;
+  margin: 0 8px;
+}
+
+.media-play-btn {
+  background: #7ddfe8;
+  color: #101418;
+  min-width: 62px;
+  min-height: 62px;
+}
+
+.media-control-btn:hover {
+  background: #c6d69a;
+  color: #101418;
+}
+
+@keyframes media-rise {
+  from {
+    opacity: 0;
+    margin-top: -8px;
+  }
+  to {
+    opacity: 1;
+    margin-top: 0;
+  }
+}
+
+.hub-shell {
+  background: rgba(16, 20, 24, 0.96);
+  color: #dce8e6;
+  border: 1px solid rgba(125, 223, 232, 0.24);
+  border-radius: 20px;
+  padding: 18px;
+}
+
+.control-header {
+  margin-bottom: 14px;
+}
+
+.avatar {
+  background-color: #273238;
+  background-image: url("/home/guesswho/Pictures/wallpaper/home/wallpaper.jpg");
+  background-size: cover;
+  background-position: center;
+  border: 2px solid #7ddfe8;
+  border-radius: 50%;
+}
+
+.header-actions {
+  margin-left: 12px;
+}
+
+.action-btn {
+  background: rgba(31, 40, 45, 0.8);
+  color: #7ddfe8;
+  border-radius: 50%;
+  min-width: 48px;
+  min-height: 48px;
+  margin-left: 7px;
+}
+
+.action-btn:hover {
+  background: #7ddfe8;
+  color: #101418;
+}
+
+.action-btn.danger {
+  color: #ff7a90;
+}
+
+.action-btn.danger:hover {
+  background: #ff7a90;
+  color: #101418;
+}
+
+.close-circle-btn {
+  background: rgba(39, 50, 56, 0.9);
+  color: #ff7a90;
+  border-radius: 50%;
+  min-width: 48px;
+  min-height: 48px;
+  margin-left: 12px;
+}
+
+.close-circle-btn:hover {
+  background: #ff7a90;
+  color: #101418;
+}
+
+.hub-body {
+  margin-bottom: 12px;
+}
+
+.top-controls {
+  margin-bottom: 8px;
+}
+
+.quick-toggles {
+  margin-right: 14px;
+}
+
+.hub-tile {
+  background: rgba(31, 40, 45, 0.9);
+  color: #dce8e6;
+  border: 1px solid rgba(135, 150, 146, 0.15);
+  border-radius: 12px;
+  padding: 0;
+  min-height: 72px;
+  margin: 4px 0;
+}
+
+.hub-tile:hover, .hub-tile.active {
+  background: #c6d69a;
+  color: #101418;
+}
+
+.wide-tile {
+  min-width: 205px;
+}
+
+.square-tile {
+  min-width: 72px;
+}
+
+.btn-icon {
+  margin-bottom: 4px;
+}
+
+.bluetooth-icon {
+  font-size: 27px;
+}
+
+.btn-label {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sliders-box {
+  background: rgba(25, 33, 38, 0.6);
+  border-radius: 16px;
+  padding: 12px 12px;
+  min-width: 156px;
+}
+
+.slider-container {
+  margin: 0 6px;
+}
+
+/* Thick Vertical Capsule Sliders */
+.slider-v trough {
+  background: rgba(135, 150, 146, 0.18);
+  border-radius: 14px;
+  min-width: 34px;
+  min-height: 174px;
+}
+
+.slider-v trough highlight {
+  background: #7ddfe8;
+  border-radius: 14px;
+  min-width: 34px;
+}
+
+.slider-v slider {
+  background: transparent;
+  min-width: 0px;
+  min-height: 0px;
+}
+
+.slider-icon {
+  color: #879692;
+  margin-top: 8px;
+}
+
+.hub-mid-actions {
+  margin: 0 0 0 14px;
+}
+
+.mid-action-btn {
+  border: 1px solid rgba(125, 223, 232, 0.22);
+}
+
+.mid-action-icon {
+}
+
+.updates-card {
+  background: rgba(198, 214, 154, 0.15);
+  border: 1px solid rgba(198, 214, 154, 0.3);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-top: 6px;
+}
+
+.updates-icon {
+  color: #c6d69a;
+  margin-right: 12px;
+}
+
+.updates-text {
+  color: #c6d69a;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* Calendar Hub Styles */
+.calendar-shell {
+  min-height: 460px;
+}
+
+.calendar-header {
+  border-bottom: 1px solid rgba(135, 150, 146, 0.15);
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+}
+
+.cal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #7ddfe8;
+}
+
+.calendar-body {
+  margin-bottom: 14px;
+}
+
+.calendar-left {
+  background: rgba(25, 33, 38, 0.7);
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.cal-day-name {
+  color: #ffb08a;
+  font-size: 14px;
+}
+
+.cal-day-num {
+  color: #ffb08a;
+  font-size: 46px;
+  font-weight: 700;
+  margin: 2px 0;
+}
+
+.cal-month-year {
+  color: #879692;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.cal-grid {
+  font-size: 13px;
+  color: #dce8e6;
+}
+
+.cal-grid:selected {
+  background: #7ddfe8;
+  color: #101418;
+  border-radius: 4px;
+}
+
+.weather-right {
+  background: rgba(25, 33, 38, 0.5);
+  border-radius: 16px;
+  padding: 14px;
+  margin-left: 10px;
+}
+
+.weather-icon {
+  color: #7ddfe8;
+  margin-bottom: 12px;
+}
+
+.weather-temp {
+  color: #dce8e6;
+  font-size: 25px;
+  font-weight: 700;
+}
+
+.weather-desc {
+  color: #879692;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.upcoming-card, .notifications-card {
+  background: rgba(31, 40, 45, 0.7);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-top: 8px;
+}
+
+.card-title {
+  color: #7ddfe8;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.event-row {
+  background: rgba(25, 33, 38, 0.8);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.event-day {
+  color: #ffb08a;
+  font-size: 13px;
+  margin-right: 12px;
+}
+
+.event-name {
+  color: #dce8e6;
+  font-size: 13px;
+}
+
+.event-time {
+  color: #879692;
+  font-size: 12px;
+}
+
+.clear-btn {
+  background: rgba(255, 122, 144, 0.15);
+  color: #ff7a90;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 6px;
+  padding: 4px 10px;
+}
+
+.clear-btn:hover {
+  background: #ff7a90;
+  color: #101418;
+}
+
+.notification-row {
+  padding: 4px 0;
+}
+
+.noti-text {
+  color: #879692;
+  font-size: 13px;
+}

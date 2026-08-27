@@ -1,0 +1,33 @@
+#!/usr/bin/env sh
+set -eu
+
+config="${HOME}/.config/eww/brokenback-hub"
+log_file="${XDG_CACHE_HOME:-${HOME}/.cache}/brokenback/eww-media.log"
+mkdir -p "$(dirname "$log_file")"
+
+[ -n "${DISPLAY:-}" ] || export DISPLAY=:0
+[ -n "${XDG_RUNTIME_DIR:-}" ] || export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+[ -n "${XAUTHORITY:-}" ] || [ ! -f "${HOME}/.Xauthority" ] || export XAUTHORITY="${HOME}/.Xauthority"
+
+if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ] && [ -S "${XDG_RUNTIME_DIR}/bus" ]; then
+  export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
+fi
+
+"${HOME}/.local/bin/brokenback-eww-daemon" "$config" >/dev/null 2>&1 || exit 1
+active="$(timeout 2s eww --config "$config" active-windows 2>>"$log_file" || true)"
+
+close() {
+  timeout 2s eww --config "$config" close "$@" >>"$log_file" 2>&1 || true
+}
+
+open() {
+  timeout 3s eww --config "$config" open "$1" >>"$log_file" 2>&1 || true
+}
+
+if printf '%s\n' "$active" | grep -q '^brokenback_media_popup:'; then
+  close brokenback_media_popup brokenback_media_background
+else
+  close brokenback_hub brokenback_hub_background brokenback_calendar_hub brokenback_calendar_background
+  open brokenback_media_background
+  open brokenback_media_popup
+fi

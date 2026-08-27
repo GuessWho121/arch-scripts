@@ -1,0 +1,246 @@
+/**
+ * BrokenBack launcher adapted from adi1090x/rofi launcher type-6.
+ * Layout: imagebox + listbox, centered card, local wallpaper.
+ */
+
+configuration {
+    modi: "drun,run,filebrowser,window";
+    show-icons: true;
+    icon-theme: "Papirus-Dark";
+    display-drun: "APPS";
+    display-run: "RUN";
+    display-filebrowser: "FILES";
+    display-window: "WINDOW";
+    drun-display-format: "{name}";
+    window-format: "{c}";
+    matching: "fuzzy";
+    sorting-method: "fzf";
+    sort: true;
+    hover-select: true;
+    click-to-exit: true;
+    terminal: "alacritty";
+}
+
+* {
+    font: "SpaceMono Nerd Font Mono Bold 11";
+    bg-overlay: #070b0dcc;
+    card: #101418cc;
+    card-alt: #1f282dcc;
+    tile: #273238cc;
+    foreground: #dce8e6;
+    muted: #879692;
+    selected: #7ddfe8;
+    selected-soft: #263f46;
+    active: #c6d69a;
+    urgent: #ff7a90;
+    peach: #ffb08a;
+    border: #7ddfe84d;
+}
+
+window {
+    transparency: "real";
+    location: center;
+    anchor: center;
+    fullscreen: false;
+    width: 760px;
+    height: 430px;
+    enabled: true;
+    cursor: "default";
+    background-color: transparent;
+}
+
+mainbox {
+    enabled: true;
+    width: 760px;
+    height: 430px;
+    spacing: 0px;
+    margin: 0px;
+    border: 1px;
+    border-color: @border;
+    border-radius: 24px;
+    background-color: @card;
+    orientation: horizontal;
+    children: [ "imagebox", "listbox" ];
+}
+
+imagebox {
+    enabled: true;
+    width: 290px;
+    height: 430px;
+    padding: 22px 14px;
+    border-radius: 24px 0px 0px 24px;
+    background-color: transparent;
+    background-image: url("/home/guesswho/Pictures/wallpaper/home/wallpaper.jpg", height);
+    orientation: vertical;
+    children: [ "inputbar", "dummy", "mode-switcher" ];
+}
+
+listbox {
+    enabled: true;
+    width: 470px;
+    height: 430px;
+    spacing: 18px;
+    padding: 22px;
+    border-radius: 0px 24px 24px 0px;
+    background-color: @card;
+    orientation: vertical;
+    children: [ "message", "listview" ];
+}
+
+dummy {
+    background-color: transparent;
+}
+
+inputbar {
+    enabled: true;
+    spacing: 12px;
+    padding: 14px 16px;
+    border: 1px;
+    border-color: @border;
+    border-radius: 16px;
+    background-color: @card-alt;
+    text-color: @foreground;
+    children: [ "textbox-prompt-colon", "entry" ];
+}
+
+textbox-prompt-colon {
+    enabled: true;
+    expand: false;
+    str: "";
+    background-color: transparent;
+    text-color: @selected;
+}
+
+entry {
+    enabled: true;
+    background-color: transparent;
+    text-color: @foreground;
+    cursor: text;
+    placeholder: "Search";
+    placeholder-color: @muted;
+}
+
+mode-switcher {
+    enabled: true;
+    spacing: 12px;
+    background-color: transparent;
+    text-color: @foreground;
+}
+
+button {
+    expand: true;
+    font: "SpaceMono Nerd Font Mono Bold 9.5";
+    width: 54px;
+    padding: 12px 10px;
+    border: 1px;
+    border-color: transparent;
+    border-radius: 999px;
+    background-color: @card-alt;
+    text-color: @foreground;
+    cursor: pointer;
+    vertical-align: 0.5;
+    horizontal-align: 0.5;
+}
+
+button selected {
+    border-color: @selected;
+    background-color: @selected;
+    text-color: #101418;
+}
+
+listview {
+    enabled: true;
+    columns: 1;
+    lines: 6;
+    cycle: true;
+    dynamic: false;
+    scrollbar: false;
+    layout: vertical;
+    reverse: false;
+    fixed-height: true;
+    fixed-columns: true;
+    height: 300px;
+    spacing: 9px;
+    background-color: transparent;
+    text-color: @foreground;
+    cursor: "default";
+}
+
+element {
+    enabled: true;
+    spacing: 14px;
+    padding: 10px 12px;
+    min-height: 38px;
+    border: 1px;
+    border-color: transparent;
+    border-radius: 16px;
+    background-color: transparent;
+    text-color: @foreground;
+    cursor: pointer;
+}
+
+element normal.normal {
+    background-color: transparent;
+    text-color: @foreground;
+}
+
+element normal.urgent {
+    background-color: @urgent;
+    text-color: #101418;
+}
+
+element normal.active {
+    background-color: @active;
+    text-color: #101418;
+}
+
+element selected.normal {
+    border-color: @selected;
+    background-color: @selected-soft;
+    text-color: @foreground;
+}
+
+element selected.urgent {
+    background-color: @urgent;
+    text-color: #101418;
+}
+
+element selected.active {
+    background-color: @active;
+    text-color: #101418;
+}
+
+element-icon {
+    background-color: transparent;
+    text-color: inherit;
+    size: 34px;
+    cursor: inherit;
+}
+
+element-text {
+    background-color: transparent;
+    text-color: inherit;
+    cursor: inherit;
+    vertical-align: 0.5;
+    horizontal-align: 0.0;
+}
+
+message {
+    background-color: transparent;
+}
+
+textbox {
+    padding: 14px;
+    border-radius: 16px;
+    background-color: @card-alt;
+    text-color: @foreground;
+    vertical-align: 0.5;
+    horizontal-align: 0.0;
+}
+
+error-message {
+    padding: 14px;
+    border-radius: 18px;
+    background-color: @card;
+    text-color: @foreground;
+}

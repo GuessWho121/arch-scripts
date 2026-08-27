@@ -1,0 +1,128 @@
+#!/usr/bin/env sh
+set -eu
+
+field="${1:-title}"
+
+player() {
+  if playerctl --player=spotify status >/dev/null 2>&1; then
+    printf '%s\n' "--player=spotify"
+  else
+    printf '%s\n' ""
+  fi
+}
+
+ctl="$(player)"
+status="$(playerctl $ctl status 2>/dev/null || true)"
+
+case "$status" in
+  Playing|Paused) ;;
+  *)
+    case "$field" in
+      class) printf 'hidden\n' ;;
+      progress) printf '0\n' ;;
+      elapsed) printf '0:00\n' ;;
+      duration) printf '%s\n' '--:--' ;;
+      *) printf '\n' ;;
+    esac
+    exit 0
+    ;;
+esac
+
+meta() {
+  playerctl $ctl metadata --format "$1" 2>/dev/null | tr '\n' ' ' | sed 's/^[[:space:]-]*//; s/[[:space:]-]*$//'
+}
+
+length_us() {
+  playerctl $ctl metadata mpris:length 2>/dev/null || printf 0
+}
+
+position_s() {
+  playerctl $ctl position 2>/dev/null || printf 0
+}
+
+format_seconds() {
+  awk -v s="$1" 'BEGIN {
+    s = int(s)
+    if (s < 0) s = 0
+    h = int(s / 3600)
+    m = int((s % 3600) / 60)
+    sec = s % 60
+    if (h > 0) printf "%d:%02d:%02d\n", h, m, sec
+    else printf "%d:%02d\n", m, sec
+  }'
+}
+
+case "$field" in
+  class)
+    [ "$status" = Playing ] && printf 'playing\n' || printf 'paused\n'
+    ;;
+  icon)
+    [ "$status" = Playing ] && printf '\n' || printf '\n'
+    ;;
+  control)
+    [ "$status" = Playing ] && printf '\n' || printf '\n'
+    ;;
+  title)
+    title="$(meta '{{title}}')"
+    [ -n "$title" ] && printf '%s\n' "$title" || printf 'Media\n'
+    ;;
+  artist)
+    artist="$(meta '{{artist}}')"
+    album="$(meta '{{album}}')"
+    if [ -n "$artist" ]; then
+      printf '%s\n' "$artist"
+    elif [ -n "$album" ]; then
+      printf '%s\n' "$album"
+    else
+      printf '%s\n' "$status"
+    fi
+    ;;
+  album)
+    album="$(meta '{{album}}')"
+    [ -n "$album" ] && printf '%s\n' "$album" || printf '%s\n' "$status"
+    ;;
+  art)
+    art="$(playerctl $ctl metadata mpris:artUrl 2>/dev/null || true)"
+    case "$art" in
+      file:///*)
+        path="${art#file://}"
+        [ -f "$path" ] && printf '%s\n' "$path" || printf '/home/guesswho/Pictures/wallpaper/home/wallpaper.jpg\n'
+        ;;
+      /*)
+        [ -f "$art" ] && printf '%s\n' "$art" || printf '/home/guesswho/Pictures/wallpaper/home/wallpaper.jpg\n'
+        ;;
+      *)
+        printf '/home/guesswho/Pictures/wallpaper/home/wallpaper.jpg\n'
+        ;;
+    esac
+    ;;
+  progress)
+    pos="$(position_s)"
+    len="$(length_us)"
+    awk -v p="$pos" -v l="$len" 'BEGIN {
+      if (l > 0) {
+        v = (p * 1000000 / l) * 100
+        if (v < 0) v = 0
+        if (v > 100) v = 100
+        printf "%d\n", v
+      } else {
+        print 0
+      }
+    }'
+    ;;
+  elapsed)
+    format_seconds "$(position_s)"
+    ;;
+  duration)
+    len="$(length_us)"
+    seconds="$(awk -v l="$len" 'BEGIN { if (l > 0) printf "%d\n", l / 1000000; else print -1 }')"
+    if [ "$seconds" -ge 0 ] 2>/dev/null; then
+      format_seconds "$seconds"
+    else
+      printf '%s\n' '--:--'
+    fi
+    ;;
+  *)
+    exit 2
+    ;;
+esac

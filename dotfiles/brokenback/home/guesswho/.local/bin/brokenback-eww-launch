@@ -1,0 +1,32 @@
+#!/usr/bin/env sh
+set -eu
+
+config="${HOME}/.config/eww/brokenback-hub"
+cache_dir="${XDG_CACHE_HOME:-${HOME}/.cache}/brokenback"
+log_file="${cache_dir}/eww-launch.log"
+
+mkdir -p "$cache_dir"
+
+if [ -z "${DISPLAY:-}" ]; then
+  export DISPLAY=:0
+fi
+
+if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ] && [ -S "/run/user/$(id -u)/bus" ]; then
+  export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus"
+fi
+
+if [ -z "${BSPWM_SOCKET:-}" ]; then
+  for socket in /tmp/bspwm_*_0-socket /tmp/bspwm*-socket; do
+    [ -S "$socket" ] || continue
+    export BSPWM_SOCKET="$socket"
+    break
+  done
+fi
+
+command -v eww >/dev/null 2>&1 || exit 0
+
+"${HOME}/.local/bin/brokenback-eww-daemon" "$config" >/dev/null 2>&1 || exit 0
+
+timeout 3s eww --config "$config" reload >>"$log_file" 2>&1 || true
+timeout 2s eww --config "$config" close brokenback_media_island >/dev/null 2>&1 || true
+timeout 3s eww --config "$config" open brokenback_media_island >>"$log_file" 2>&1 || true

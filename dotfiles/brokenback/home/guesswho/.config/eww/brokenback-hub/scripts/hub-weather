@@ -1,0 +1,38 @@
+#!/usr/bin/env sh
+# Fetch weather and return JSON. Non-blocking with caching.
+
+cache_file="/home/guesswho/.cache/brokenback/weather.json"
+mkdir -p "$(dirname "$cache_file")"
+
+# If cache file doesn't exist or is older than 30 minutes (1800s), fetch in background
+if [ ! -f "$cache_file" ] || [ $(( $(date +%s) - $(stat -c %Y "$cache_file") )) -gt 1800 ]; then
+  (
+    # Get condition and temperature from wttr.in
+    raw="$(curl -s --max-time 5 "wttr.in?format=%C:%t" 2>/dev/null || true)"
+    if [ -n "$raw" ] && echo "$raw" | grep -q ":"; then
+      condition="$(echo "$raw" | cut -d: -f1 | tr '[:upper:]' '[:lower:]')"
+      temp="$(echo "$raw" | cut -d: -f2 | sed 's/+//')" # Strip leading plus if present
+      
+      # Map condition to Nerd Font icon
+      case "$condition" in
+        *clear*|*sunny*) icon="󰖙" ;;
+        *cloud*|*overcast*) icon="󰖐" ;;
+        *rain*|*drizzle*|*shower*) icon="󰖗" ;;
+        *snow*|*flurry*) icon="󰖘" ;;
+        *thunder*) icon="󰙦" ;;
+        *fog*|*mist*) icon="󰖑" ;;
+        *) icon="󰖖" ;;
+      esac
+      
+      # Output raw JSON to cache
+      echo "{\"icon\": \"$icon\", \"temp\": \"$temp\", \"desc\": \"$condition\"}" > "$cache_file"
+    fi
+  ) &
+fi
+
+# Output current cached weather
+if [ -f "$cache_file" ]; then
+  cat "$cache_file"
+else
+  echo '{"icon": "󰖖", "temp": "20°C", "desc": "clear"}'
+fi

@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+set -eu
+
+count="0"
+if command -v bspc >/dev/null 2>&1; then
+  count="$(bspc query -N -n .window 2>/dev/null | wc -l | tr -d ' ')"
+fi
+
+printf '%%{T3}%%{T-} %s\n' "${count:-0}"

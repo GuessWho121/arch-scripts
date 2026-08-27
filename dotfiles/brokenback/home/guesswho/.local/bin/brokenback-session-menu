@@ -1,0 +1,29 @@
+#!/usr/bin/env sh
+set -eu
+
+theme="${HOME}/.config/rofi/surface-hub.rasi"
+choice="$(printf ' Lock\n Logout\n Suspend\n Reboot\n Shutdown\n' | rofi -dmenu -p power -theme "$theme")"
+
+confirm_power() {
+  action="$1"
+  answer="$(printf 'No\nYes\n' | rofi -dmenu -p "$action?" -theme "$theme")"
+  [ "$answer" = "Yes" ]
+}
+
+case "$choice" in
+  *Lock)
+    /usr/local/bin/brokenback-lock
+    ;;
+  *Logout)
+    confirm_power Logout && bspc quit
+    ;;
+  *Suspend)
+    confirm_power Suspend && systemctl suspend
+    ;;
+  *Reboot)
+    confirm_power Reboot && systemctl reboot
+    ;;
+  *Shutdown)
+    confirm_power Shutdown && systemctl poweroff
+    ;;
+esac

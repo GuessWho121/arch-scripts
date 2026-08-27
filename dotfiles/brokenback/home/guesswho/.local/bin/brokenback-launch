@@ -1,0 +1,29 @@
+#!/usr/bin/env sh
+set -eu
+
+case "${1:-menu}" in
+  menu)
+    brokenback-rofi-launcher drun >/dev/null 2>&1 &
+    ;;
+  hub)
+    brokenback-hub-menu >/dev/null 2>&1 &
+    ;;
+  terminal)
+    alacritty >/dev/null 2>&1 &
+    ;;
+  files)
+    alacritty -e ranger >/dev/null 2>&1 &
+    ;;
+  firefox)
+    firefox >/dev/null 2>&1 &
+    ;;
+  nvim)
+    alacritty -e nvim >/dev/null 2>&1 &
+    ;;
+  btop)
+    alacritty -e btop >/dev/null 2>&1 &
+    ;;
+  *)
+    brokenback-rofi-launcher drun >/dev/null 2>&1 &
+    ;;
+esac

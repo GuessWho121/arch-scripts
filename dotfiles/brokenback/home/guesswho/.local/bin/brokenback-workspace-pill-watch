@@ -1,0 +1,24 @@
+#!/usr/bin/env sh
+set -eu
+
+status="${HOME}/.local/bin/brokenback-workspaces-status"
+launch="${HOME}/.local/bin/brokenback-polybar-launch"
+cache_dir="${XDG_CACHE_HOME:-${HOME}/.cache}/brokenback"
+count_file="${cache_dir}/workspace-pill-count"
+
+mkdir -p "$cache_dir"
+
+count() {
+  "$status" --count 2>/dev/null || printf 3
+}
+
+last="$(count)"
+printf '%s\n' "$last" > "$count_file"
+
+bspc subscribe desktop_focus node_add node_remove node_transfer 2>/dev/null | while read -r _; do
+  now="$(count)"
+  [ "$now" != "$last" ] || continue
+  last="$now"
+  printf '%s\n' "$now" > "$count_file"
+  "$launch" left >/dev/null 2>&1 &
+done

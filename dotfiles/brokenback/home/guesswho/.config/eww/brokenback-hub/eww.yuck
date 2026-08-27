@@ -1,0 +1,243 @@
+(defpoll volume :interval "1s" :initial "0"
+  "/home/guesswho/.config/eww/brokenback-hub/scripts/hub-state volume")
+
+(defpoll brightness :interval "2s" :initial "0"
+  "/home/guesswho/.config/eww/brokenback-hub/scripts/hub-state brightness")
+
+(defpoll wifi_ssid :interval "5s" :initial "offline"
+  "/home/guesswho/.config/eww/brokenback-hub/scripts/hub-state network")
+
+(defpoll bluetooth_status :interval "5s" :initial "off"
+  "/home/guesswho/.local/bin/brokenback-bluetooth-status")
+
+(defpoll dnd_state :interval "2s" :initial "off"
+  "/home/guesswho/.config/eww/brokenback-hub/scripts/hub-state dnd")
+
+(defpoll update_count :interval "15m" :initial "0"
+  "/home/guesswho/.config/eww/brokenback-hub/scripts/hub-state updates")
+
+(defpoll media_class :interval "1s" :initial "hidden"
+  "/home/guesswho/.config/eww/brokenback-hub/scripts/media-state class")
+
+(defpoll media_icon :interval "1s" :initial ""
+  "/home/guesswho/.config/eww/brokenback-hub/scripts/media-state icon")
+
+(defpoll media_control_icon :interval "1s" :initial ""
+  "/home/guesswho/.config/eww/brokenback-hub/scripts/media-state control")
+
+(defpoll media_title :interval "1s" :initial ""
+  "/home/guesswho/.config/eww/brokenback-hub/scripts/media-state title")
+
+(defpoll media_artist :interval "1s" :initial ""
+  "/home/guesswho/.config/eww/brokenback-hub/scripts/media-state artist")
+
+(defpoll media_album :interval "1s" :initial ""
+  "/home/guesswho/.config/eww/brokenback-hub/scripts/media-state album")
+
+(defpoll media_art :interval "3s" :initial "/home/guesswho/Pictures/wallpaper/home/wallpaper.jpg"
+  "/home/guesswho/.config/eww/brokenback-hub/scripts/media-state art")
+
+(defpoll media_progress :interval "1s" :initial "0"
+  "/home/guesswho/.config/eww/brokenback-hub/scripts/media-state progress")
+
+(defpoll media_elapsed :interval "1s" :initial "0:00"
+  "/home/guesswho/.config/eww/brokenback-hub/scripts/media-state elapsed")
+
+(defpoll media_duration :interval "1s" :initial "--:--"
+  "/home/guesswho/.config/eww/brokenback-hub/scripts/media-state duration")
+
+;; Date & Weather variables for Calendar Hub
+(defpoll current_day_name :interval "10s" "date +%A | tr 'a-z' 'A-Z'")
+(defpoll current_day_num :interval "10s" "date +%e | tr -d ' '")
+(defpoll current_month_year :interval "10s" "date '+%B %Y' | tr 'a-z' 'A-Z'")
+
+(defpoll weather_data :interval "10m" :initial "{\"icon\": \"󰖖\", \"temp\": \"20°C\", \"desc\": \"clear\"}"
+  "/home/guesswho/.config/eww/brokenback-hub/scripts/hub-weather")
+
+;; Temporary fullscreen blur/dim layer used only while the Rofi Type 6 launcher is open.
+(defwindow brokenback_rofi_blur
+  :monitor 0
+  :geometry (geometry :x "0px" :y "0px" :width "100%" :height "100%")
+  :stacking "fg"
+  :focusable false
+  :wm-ignore true
+  (box :class "rofi-blur-layer"))
+
+(defwindow brokenback_media_island
+  :monitor 0
+  :geometry (geometry :x "0px" :y "5px" :width "368px" :height "44px" :anchor "top center")
+  :stacking "fg"
+  :focusable false
+  :wm-ignore true
+  (media-island))
+
+(defwindow brokenback_media_popup
+  :monitor 0
+  :geometry (geometry :x "0px" :y "54px" :width "430px" :height "304px" :anchor "top center")
+  :stacking "fg"
+  :windowtype "dialog"
+  :wm-ignore true
+  (media-popup))
+
+(defwindow brokenback_media_background
+  :monitor 0
+  :geometry (geometry :x "0px" :y "0px" :width "100%" :height "100%")
+  :stacking "fg"
+  :focusable false
+  (eventbox :onclick "eww --config /home/guesswho/.config/eww/brokenback-hub close brokenback_media_popup brokenback_media_background"
+    (box :style "background: transparent;")))
+
+;; Control Hub Window
+(defwindow brokenback_hub
+  :monitor 0
+  :geometry (geometry :x "-16px" :y "54px" :width "430px" :height "470px" :anchor "top right")
+  :stacking "fg"
+  :windowtype "dialog"
+  :wm-ignore true
+  (control-hub-layout))
+
+;; Fullscreen Click-Outside-to-Close Background for Control Hub
+(defwindow brokenback_hub_background
+  :monitor 0
+  :geometry (geometry :x "0px" :y "0px" :width "100%" :height "100%")
+  :stacking "fg"
+  :focusable false
+  (eventbox :onclick "eww --config /home/guesswho/.config/eww/brokenback-hub close brokenback_hub brokenback_hub_background"
+    (box :style "background: transparent;")))
+
+;; Calendar Hub Window
+(defwindow brokenback_calendar_hub
+  :monitor 0
+  :geometry (geometry :x "-16px" :y "54px" :width "430px" :height "520px" :anchor "top right")
+  :stacking "fg"
+  :windowtype "dialog"
+  :wm-ignore true
+  (calendar-hub-layout))
+
+;; Fullscreen Click-Outside-to-Close Background for Calendar Hub
+(defwindow brokenback_calendar_background
+  :monitor 0
+  :geometry (geometry :x "0px" :y "0px" :width "100%" :height "100%")
+  :stacking "fg"
+  :focusable false
+  (eventbox :onclick "eww --config /home/guesswho/.config/eww/brokenback-hub close brokenback_calendar_hub brokenback_calendar_background"
+    (box :style "background: transparent;")))
+
+;; Control Hub Layout
+(defwidget control-hub-layout []
+  (box :class "hub-shell" :orientation "vertical" :space-evenly false
+    (control-header)
+    (box :class "hub-body" :orientation "vertical" :space-evenly false
+      (box :class "top-controls" :orientation "horizontal" :space-evenly false
+        (box :class "quick-toggles" :orientation "vertical" :space-evenly false :width 205
+          (button :class "hub-tile wide-tile" :width 205 :height 72 :onclick "/home/guesswho/.config/eww/brokenback-hub/scripts/hub-action wifi"
+            (box :orientation "vertical" :space-evenly false
+              (label :class "bb-icon btn-icon wifi-icon" :text "")
+              (label :class "btn-label" :limit-width 18 :text wifi_ssid)))
+          (button :class "hub-tile wide-tile" :width 205 :height 72 :onclick "/home/guesswho/.config/eww/brokenback-hub/scripts/hub-action bluetooth"
+            (box :orientation "vertical" :space-evenly false
+              (label :class "bb-icon btn-icon bluetooth-icon" :text "󰂯")
+              (label :class "btn-label" :limit-width 18 :text "${bluetooth_status == '󰂲 off' ? 'Off' : (bluetooth_status == '󰂯 on' ? 'On' : 'Connected')}")))
+          (button :class "hub-tile wide-tile" :width 205 :height 72 :onclick "/home/guesswho/.config/eww/brokenback-hub/scripts/hub-action performance"
+            (box :orientation "vertical" :space-evenly false
+              (label :class "bb-icon btn-icon perf-icon" :text "󰓅")
+              (label :class "btn-label" :text "Auto"))))
+        (box :class "sliders-box" :orientation "horizontal" :space-evenly true :hexpand true
+          (box :class "slider-container" :orientation "vertical" :space-evenly false
+            (scale :class "slider-v" :orientation "v" :flipped true :min 0 :max 100 :value brightness :onchange "/home/guesswho/.config/eww/brokenback-hub/scripts/hub-set brightness {}")
+            (label :class "bb-icon slider-icon" :text "󰃠"))
+          (box :class "slider-container" :orientation "vertical" :space-evenly false
+            (scale :class "slider-v" :orientation "v" :flipped true :min 0 :max 100 :value volume :onchange "/home/guesswho/.config/eww/brokenback-hub/scripts/hub-set volume {}")
+            (label :class "bb-icon slider-icon" :text ""))))
+      (box :class "bottom-controls" :orientation "horizontal" :space-evenly false
+        (button :class "hub-tile wide-tile ${dnd_state == 'on' ? 'active' : ''}" :width 205 :height 72 :onclick "/home/guesswho/.config/eww/brokenback-hub/scripts/hub-action dnd"
+          (box :orientation "vertical" :space-evenly false
+            (label :class "bb-icon btn-icon dnd-icon" :text "󰂛")
+            (label :class "btn-label" :text "${dnd_state == 'on' ? 'DND' : 'Notify'}")))
+        (box :class "hub-mid-actions" :orientation "horizontal" :space-evenly false :width 168
+          (button :class "hub-tile square-tile mid-action-btn" :width 72 :height 72 :onclick "/home/guesswho/.config/eww/brokenback-hub/scripts/hub-action screenshot"
+            (label :class "bb-icon mid-action-icon" :text ""))
+          (box :width 24)
+          (button :class "hub-tile square-tile mid-action-btn" :width 72 :height 72 :onclick "/home/guesswho/.config/eww/brokenback-hub/scripts/hub-action stats"
+            (label :class "bb-icon mid-action-icon" :text "󰄧")))))
+    (box :class "updates-card" :orientation "horizontal" :space-evenly false
+      (label :class "bb-icon updates-icon" :text "󰏗")
+      (label :class "updates-text" :xalign 0 :text "${update_count} Updates available"))))
+
+(defwidget media-island []
+  (revealer :transition "slideup" :duration "350ms" :reveal "${media_class != 'hidden'}"
+    (eventbox :onclick "/home/guesswho/.local/bin/brokenback-media-toggle"
+      (box :class "media-island ${media_class}" :orientation "vertical" :space-evenly false
+        (box :class "media-row" :orientation "horizontal" :space-evenly false
+          (label :class "bb-icon media-icon" :text media_icon)
+          (box :class "media-copy" :orientation "vertical" :space-evenly false :hexpand true
+            (label :class "media-title" :xalign 0 :limit-width 30 :text media_title)
+            (label :class "media-artist" :xalign 0 :limit-width 34 :text media_artist)))
+        (scale :class "media-progress" :orientation "h" :min 0 :max 100 :value media_progress)))))
+
+(defwidget media-popup []
+  (box :class "media-popup ${media_class}" :orientation "vertical" :space-evenly false
+    (box :class "media-popup-top" :orientation "horizontal" :space-evenly false
+      (box :class "media-art-frame" :width 96 :height 96
+        (image :class "media-art" :path media_art :image-width 96 :image-height 96))
+      (box :class "media-popup-copy" :orientation "vertical" :space-evenly false :hexpand true
+        (label :class "media-popup-title" :xalign 0 :limit-width 32 :text media_title)
+        (label :class "media-popup-artist" :xalign 0 :limit-width 34 :text media_artist)
+        (label :class "media-popup-album" :xalign 0 :limit-width 34 :text media_album))
+      (button :class "media-popup-close" :width 44 :height 44 :onclick "eww --config /home/guesswho/.config/eww/brokenback-hub close brokenback_media_popup brokenback_media_background"
+        (label :class "bb-icon media-popup-close-icon" :text "")))
+    (box :class "media-time-row" :orientation "horizontal" :space-evenly false
+      (label :class "media-time" :text media_elapsed)
+      (scale :class "media-popup-progress" :orientation "h" :hexpand true :min 0 :max 100 :value media_progress)
+      (label :class "media-time" :text media_duration))
+    (box :class "media-popup-controls" :orientation "horizontal" :space-evenly false :halign "center"
+      (button :class "media-control-btn" :onclick "/home/guesswho/.config/eww/brokenback-hub/scripts/hub-action media-prev"
+        (label :class "bb-icon" :text ""))
+      (button :class "media-control-btn media-play-btn" :onclick "/home/guesswho/.config/eww/brokenback-hub/scripts/hub-action media-play"
+        (label :class "bb-icon" :text media_control_icon))
+      (button :class "media-control-btn" :onclick "/home/guesswho/.config/eww/brokenback-hub/scripts/hub-action media-next"
+        (label :class "bb-icon" :text "")))))
+
+(defwidget control-header []
+  (box :class "control-header" :orientation "horizontal" :space-evenly false
+    (box :class "avatar" :width 52 :height 52)
+    (box :class "header-actions" :orientation "horizontal" :space-evenly false :hexpand true :halign "end"
+      (button :class "action-btn" :onclick "/home/guesswho/.config/eww/brokenback-hub/scripts/hub-action lock"
+        (label :class "bb-icon" :text ""))
+      (button :class "action-btn danger" :onclick "/home/guesswho/.config/eww/brokenback-hub/scripts/hub-action power"
+        (label :class "bb-icon" :text ""))
+      (button :class "close-circle-btn" :onclick "eww --config /home/guesswho/.config/eww/brokenback-hub close brokenback_hub brokenback_hub_background"
+        (label :class "bb-icon" :text "")))))
+
+;; Calendar Hub Layout
+(defwidget calendar-hub-layout []
+  (box :class "hub-shell calendar-shell" :orientation "vertical" :space-evenly false
+    (calendar-header)
+    (box :class "calendar-body" :orientation "horizontal" :space-evenly false
+      (box :class "calendar-left" :orientation "vertical" :space-evenly false :width 230
+        (label :class "cal-day-name" :xalign 0 :text current_day_name)
+        (label :class "cal-day-num" :xalign 0 :text current_day_num)
+        (label :class "cal-month-year" :xalign 0 :text current_month_year)
+        (calendar :class "cal-grid" :show-details false :show-heading false :show-day-names true))
+      (box :class "weather-right" :orientation "vertical" :space-evenly false :hexpand true :halign "center"
+        (label :class "bb-icon weather-icon" :text "${jq(weather_data, '.icon')}")
+        (label :class "weather-temp" :text "${jq(weather_data, '.temp')}")
+        (label :class "weather-desc" :text "${jq(weather_data, '.desc')}")))
+    (box :class "upcoming-card" :orientation "vertical" :space-evenly false
+      (label :class "card-title" :xalign 0 :text "Upcoming")
+      (box :class "event-row" :orientation "horizontal" :space-evenly false
+        (label :class "event-day" :text "Wed")
+        (label :class "event-name" :xalign 0 :text "Gym" :hexpand true)
+        (label :class "event-time" :text "02:00 PM - 03:30 PM")))
+    (box :class "notifications-card" :orientation "vertical" :space-evenly false
+      (box :orientation "horizontal" :space-evenly false
+        (label :class "card-title" :xalign 0 :text "Notifications" :hexpand true)
+        (button :class "clear-btn" :onclick "dunstctl history-clear" "Clear"))
+      (box :class "notification-row" :orientation "horizontal" :space-evenly false
+        (label :class "noti-text" :xalign 0 :text "No new notifications")))))
+
+(defwidget calendar-header []
+  (box :class "control-header calendar-header" :orientation "horizontal" :space-evenly false
+    (label :class "cal-title" :xalign 0 :text "Calendar & Weather" :hexpand true)
+    (button :class "close-circle-btn" :onclick "eww --config /home/guesswho/.config/eww/brokenback-hub close brokenback_calendar_hub brokenback_calendar_background"
+      (label :class "bb-icon" :text ""))))

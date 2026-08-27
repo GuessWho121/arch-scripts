@@ -1,0 +1,48 @@
+[window]
+opacity = 0.88
+decorations = "None"
+dynamic_title = true
+padding = { x = 10, y = 10 }
+
+[font]
+size = 10.5
+normal = { family = "SpaceMono Nerd Font Mono", style = "Regular" }
+bold = { family = "SpaceMono Nerd Font Mono", style = "Bold" }
+italic = { family = "SpaceMono Nerd Font Mono", style = "Italic" }
+bold_italic = { family = "SpaceMono Nerd Font Mono", style = "Bold Italic" }
+
+[colors.primary]
+background = "#101418"
+foreground = "#dce8e6"
+
+[colors.cursor]
+text = "#101418"
+cursor = "#7ddfe8"
+
+[colors.selection]
+text = "#101418"
+background = "#c6d69a"
+
+[colors.normal]
+black = "#101418"
+red = "#ff7a90"
+green = "#a8d58d"
+yellow = "#e8d98b"
+blue = "#7db7ff"
+magenta = "#d6a2ff"
+cyan = "#7ddfe8"
+white = "#dce8e6"
+
+[colors.bright]
+black = "#53605f"
+red = "#ff9bad"
+green = "#bce6a4"
+yellow = "#f0e4a6"
+blue = "#9bc9ff"
+magenta = "#e2b8ff"
+cyan = "#9beaf0"
+white = "#f1f7f6"
+
+[cursor.style]
+shape = "Beam"
+blinking = "On"

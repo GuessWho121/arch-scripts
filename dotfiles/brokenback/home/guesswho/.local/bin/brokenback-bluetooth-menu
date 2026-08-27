@@ -1,0 +1,53 @@
+#!/usr/bin/env sh
+set -eu
+
+theme="${HOME}/.config/rofi/surface-hub.rasi"
+
+menu='Open manager
+Power on
+Power off
+Scan on
+Scan off
+Connect paired
+Disconnect device'
+
+choice="$(printf '%s\n' "$menu" | rofi -dmenu -p bluetooth -theme "$theme")"
+
+select_device() {
+  mode="$1"
+  case "$mode" in
+    paired) devices="$(bluetoothctl devices Paired 2>/dev/null || true)" ;;
+    connected) devices="$(bluetoothctl devices Connected 2>/dev/null || true)" ;;
+    *) devices="$(bluetoothctl devices 2>/dev/null || true)" ;;
+  esac
+
+  [ -n "$devices" ] || return 1
+  line="$(printf '%s\n' "$devices" | sed 's/^Device //' | rofi -dmenu -p device -theme "$theme")"
+  printf '%s\n' "$line" | awk '{print $1}'
+}
+
+case "$choice" in
+  'Open manager')
+    blueman-manager >/dev/null 2>&1 &
+    ;;
+  'Power on')
+    bluetoothctl power on >/dev/null
+    ;;
+  'Power off')
+    bluetoothctl power off >/dev/null
+    ;;
+  'Scan on')
+    bluetoothctl scan on >/dev/null 2>&1 &
+    ;;
+  'Scan off')
+    bluetoothctl scan off >/dev/null 2>&1 || true
+    ;;
+  'Connect paired')
+    mac="$(select_device paired || true)"
+    [ -n "${mac:-}" ] && bluetoothctl connect "$mac"
+    ;;
+  'Disconnect device')
+    mac="$(select_device connected || true)"
+    [ -n "${mac:-}" ] && bluetoothctl disconnect "$mac"
+    ;;
+esac

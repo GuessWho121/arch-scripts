@@ -1,0 +1,36 @@
+#!/usr/bin/env sh
+set -eu
+
+config="${1:-${HOME}/.config/eww/brokenback-hub}"
+cache_dir="${XDG_CACHE_HOME:-${HOME}/.cache}/brokenback"
+log_file="${cache_dir}/eww-daemon.log"
+
+mkdir -p "$cache_dir"
+
+[ -n "${DISPLAY:-}" ] || export DISPLAY=:0
+[ -n "${XDG_RUNTIME_DIR:-}" ] || export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+[ -n "${XAUTHORITY:-}" ] || [ ! -f "${HOME}/.Xauthority" ] || export XAUTHORITY="${HOME}/.Xauthority"
+
+if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ] && [ -S "${XDG_RUNTIME_DIR}/bus" ]; then
+  export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
+fi
+
+command -v eww >/dev/null 2>&1 || exit 1
+
+# Clear old stuck one-shot clients; leave the daemon alone if it is healthy.
+pkill -u "$(id -u)" -f "eww --config ${config} open" >/dev/null 2>&1 || true
+
+if timeout 2s eww --config "$config" ping >/dev/null 2>&1; then
+  exit 0
+fi
+
+timeout 2s eww --config "$config" kill >/dev/null 2>&1 || true
+
+if command -v setsid >/dev/null 2>&1; then
+  setsid -f sh -c 'exec eww --config "$1" daemon >>"$2" 2>&1' sh "$config" "$log_file"
+else
+  nohup sh -c 'exec eww --config "$1" daemon >>"$2" 2>&1' sh "$config" "$log_file" </dev/null >/dev/null 2>&1 &
+fi
+
+sleep 0.8
+timeout 2s eww --config "$config" ping >/dev/null 2>&1

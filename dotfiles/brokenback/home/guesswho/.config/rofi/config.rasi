@@ -1,0 +1,185 @@
+configuration {
+    modi: "drun,filebrowser,window";
+    show-icons: true;
+    icon-theme: "Papirus-Dark";
+    terminal: "alacritty";
+    drun-display-format: "{name}";
+    window-format: "{c}";
+    display-drun: "󰀻";
+    display-filebrowser: "";
+    display-window: "";
+    disable-history: false;
+    sort: true;
+    sorting-method: "fzf";
+    matching: "fuzzy";
+    hover-select: true;
+    click-to-exit: true;
+    kb-accept-entry: "Return";
+}
+
+* {
+    font: "SpaceMono Nerd Font Mono 9";
+    background: #101418ee;
+    background-alt: #1f282dee;
+    tile-bg: #273238d8;
+    foreground: #dce8e6;
+    muted: #879692;
+    selected: #7ddfe8a8;
+    selected-soft: #263f46;
+    accent: #7ddfe8;
+    accent-alt: #c6d69a;
+    peach: #ffb08a;
+    danger: #ff7a90;
+    divider: #7ddfe830;
+}
+
+window {
+    transparency: "real";
+    location: southwest;
+    anchor: southwest;
+    fullscreen: false;
+    width: 286px;
+    x-offset: 5px;
+    y-offset: -9px;
+    border-radius: 10px;
+    border: 1px;
+    border-color: @divider;
+    background-color: transparent;
+}
+
+mainbox {
+    spacing: 0px;
+    background-color: @background;
+    orientation: vertical;
+    children: [ "inputbar", "mode-switcher", "listbox" ];
+    border-radius: 10px;
+}
+
+inputbar {
+    enabled: true;
+    spacing: 10px;
+    padding: 40px 18px;
+    background-color: transparent;
+    background-image: url("/home/guesswho/Pictures/wallpaper/home/wallpaper.jpg", width);
+    text-color: @foreground;
+    orientation: horizontal;
+    children: [ "prompt", "entry" ];
+}
+
+prompt {
+    enabled: true;
+    expand: false;
+    padding: 10px 13px;
+    border-radius: 100%;
+    background-color: @background-alt;
+    text-color: @accent;
+}
+
+entry {
+    enabled: true;
+    expand: true;
+    padding: 10px 14px;
+    border-radius: 100%;
+    background-color: @background-alt;
+    text-color: @foreground;
+    cursor: text;
+    placeholder: "Search";
+    placeholder-color: @muted;
+}
+
+mode-switcher {
+    enabled: true;
+    spacing: 13px;
+    padding: 10px 18px;
+    background-color: transparent;
+    text-color: @foreground;
+    justify-content: center;
+}
+
+button {
+    width: 40px;
+    padding: 9px;
+    border-radius: 100%;
+    background-color: @background-alt;
+    text-color: inherit;
+    cursor: pointer;
+}
+
+button selected {
+    background-color: @accent;
+    text-color: #101418;
+}
+
+listbox {
+    spacing: 9px;
+    padding: 9px 18px 18px 18px;
+    background-color: transparent;
+    orientation: vertical;
+    children: [ "message", "listview" ];
+}
+
+listview {
+    enabled: true;
+    columns: 1;
+    lines: 7;
+    cycle: true;
+    dynamic: true;
+    scrollbar: false;
+    layout: vertical;
+    fixed-height: false;
+    fixed-columns: true;
+    spacing: 3px;
+    background-color: transparent;
+    text-color: @foreground;
+    cursor: "default";
+}
+
+element {
+    enabled: true;
+    spacing: 9px;
+    padding: 7px;
+    border-radius: 15px;
+    background-color: transparent;
+    text-color: @foreground;
+    cursor: pointer;
+}
+
+element selected {
+    background-color: @selected-soft;
+    border: 1px;
+    border-color: @selected;
+    text-color: @foreground;
+}
+
+element-icon {
+    background-color: transparent;
+    text-color: inherit;
+    size: 28px;
+    cursor: inherit;
+}
+
+element-text {
+    background-color: transparent;
+    text-color: inherit;
+    cursor: inherit;
+    vertical-align: 0.5;
+    horizontal-align: 0.0;
+}
+
+message {
+    background-color: transparent;
+}
+
+textbox {
+    padding: 10px;
+    border-radius: 100%;
+    background-color: @background-alt;
+    text-color: @foreground;
+}
+
+error-message {
+    padding: 10px;
+    border-radius: 20px;
+    background-color: @background;
+    text-color: @foreground;
+}

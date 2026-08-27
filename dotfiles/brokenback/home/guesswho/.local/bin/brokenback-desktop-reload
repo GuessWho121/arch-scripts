@@ -1,0 +1,32 @@
+#!/usr/bin/env sh
+set -eu
+
+export PATH="${HOME}/.local/bin:${PATH}"
+
+if [ -z "${DISPLAY:-}" ]; then
+  export DISPLAY=:0
+fi
+
+if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ] && [ -S "/run/user/$(id -u)/bus" ]; then
+  export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus"
+fi
+
+if [ -z "${BSPWM_SOCKET:-}" ]; then
+  for socket in /tmp/bspwm_*_0-socket /tmp/bspwm*-socket; do
+    [ -S "$socket" ] || continue
+    export BSPWM_SOCKET="$socket"
+    break
+  done
+fi
+
+pkill -u "$USER" -x sxhkd >/dev/null 2>&1 || true
+sxhkd -c "${HOME}/.config/sxhkd/sxhkdrc" >/dev/null 2>&1 &
+
+pkill -u "$USER" -x dunst >/dev/null 2>&1 || true
+dunst -conf "${HOME}/.config/dunst/dunstrc" >/dev/null 2>&1 &
+
+pkill -u "$USER" -x picom >/dev/null 2>&1 || true
+picom --config "${HOME}/.config/picom/picom.conf" >/dev/null 2>&1 &
+
+brokenback-eww-launch >/dev/null 2>&1 || true
+brokenback-polybar-launch >/dev/null 2>&1 &

@@ -1,0 +1,24 @@
+#!/usr/bin/env sh
+set -eu
+
+status="$(playerctl --player=spotify status 2>/dev/null || playerctl status 2>/dev/null || true)"
+
+if [ -z "$status" ]; then
+  printf '%%{T3}%%{T-} no media\n'
+  exit 0
+fi
+
+metadata="$(playerctl --player=spotify metadata --format '{{artist}} - {{title}}' 2>/dev/null || playerctl metadata --format '{{artist}} - {{title}}' 2>/dev/null || true)"
+metadata="$(printf '%s' "$metadata" | sed 's/^[[:space:]-]*//; s/[[:space:]-]*$//')"
+
+if [ -z "$metadata" ]; then
+  metadata="media"
+fi
+
+case "$status" in
+  Playing) icon='' ;;
+  Paused) icon='' ;;
+  *) icon='' ;;
+esac
+
+printf '%%{T3}%s%%{T-} %s\n' "$icon" "$metadata" | cut -c 1-80

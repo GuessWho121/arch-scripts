@@ -1,0 +1,54 @@
+#!/usr/bin/env sh
+set -eu
+
+export PATH="/home/guesswho/.local/bin:$PATH"
+
+config="/home/guesswho/.config/eww/brokenback-hub"
+
+
+close_hub() {
+  eww --config "$config" close brokenback_hub brokenback_hub_background >/dev/null 2>&1 || true
+}
+
+case "${1:-}" in
+  wifi)
+    close_hub
+    alacritty -e nmtui >/dev/null 2>&1 &
+    ;;
+  bluetooth)
+    close_hub
+    brokenback-bluetooth-menu >/dev/null 2>&1 &
+    ;;
+  screenshot)
+    close_hub
+    brokenback-screenshot area >/dev/null 2>&1 &
+    ;;
+  stats)
+    close_hub
+    alacritty -e btop >/dev/null 2>&1 &
+    ;;
+  dnd)
+    if command -v dunstctl >/dev/null 2>&1 && dunstctl is-paused 2>/dev/null | grep -q true; then
+      dunstctl set-paused false
+    else
+      dunstctl set-paused true
+    fi
+    ;;
+  lock)
+    close_hub
+    /usr/local/bin/brokenback-lock >/dev/null 2>&1 &
+    ;;
+  power)
+    close_hub
+    brokenback-session-menu >/dev/null 2>&1 &
+    ;;
+  media-play)
+    playerctl play-pause >/dev/null 2>&1 || true
+    ;;
+  media-prev)
+    playerctl previous >/dev/null 2>&1 || true
+    ;;
+  media-next)
+    playerctl next >/dev/null 2>&1 || true
+    ;;
+esac

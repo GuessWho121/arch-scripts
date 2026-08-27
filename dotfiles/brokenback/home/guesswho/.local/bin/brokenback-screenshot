@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+set -eu
+
+export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-xcb}"
+
+mode="${1:-area}"
+
+case "$mode" in
+  area)
+    exec flameshot gui
+    ;;
+  area-clipboard)
+    exec flameshot gui -c
+    ;;
+  full)
+    exec flameshot full -c
+    ;;
+  launcher)
+    exec flameshot launcher
+    ;;
+  *)
+    printf 'usage: %s [area|area-clipboard|full|launcher]\n' "$0" >&2
+    exit 2
+    ;;
+esac

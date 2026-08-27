@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+set -eu
+
+status="$(playerctl --player=spotify status 2>/dev/null || playerctl status 2>/dev/null || true)"
+cache_file="${HOME}/.cache/brokenback/last-media.txt"
+mkdir -p "$(dirname "$cache_file")"
+
+if [ "$status" = "Playing" ] || [ "$status" = "Paused" ]; then
+  metadata="$(playerctl --player=spotify metadata --format '{{artist}} - {{title}}' 2>/dev/null || playerctl metadata --format '{{artist}} - {{title}}' 2>/dev/null || true)"
+  metadata="$(printf '%s' "$metadata" | sed 's/^[[:space:]-]*//; s/[[:space:]-]*$//')"
+  if [ -n "$metadata" ]; then
+    printf '%s\n' "$metadata" > "$cache_file"
+  fi
+fi
+
+if [ -n "$status" ]; then
+  "${HOME}/.local/bin/brokenback-media-status" | cut -c 1-80
+else
+  if [ -f "$cache_file" ]; then
+    metadata="$(cat "$cache_file")"
+    printf '%%{T3}%%{T-} %s\n' "$metadata" | cut -c 1-80
+  else
+    printf '%%{T3}%%{T-} no media\n'
+  fi
+fi

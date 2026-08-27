@@ -1,0 +1,88 @@
+#!/usr/bin/env sh
+set -eu
+
+export PATH="/home/guesswho/.local/bin:$PATH"
+
+strip_polybar_tags() {
+
+  sed -E 's/%\{T[0-9]+\}//g; s/%\{T-\}//g; s/%\{F#[0-9A-Fa-f]+\}//g; s/%\{F-\}//g; s/%\{A[^}]*\}//g'
+}
+
+guess_bspwm_env() {
+  if [ -z "${DISPLAY:-}" ]; then
+    export DISPLAY=:0
+  fi
+  if [ -z "${BSPWM_SOCKET:-}" ]; then
+    for socket in /tmp/bspwm_*_0-socket /tmp/bspwm*-socket; do
+      [ -S "$socket" ] || continue
+      export BSPWM_SOCKET="$socket"
+      break
+    done
+  fi
+}
+
+case "${1:-}" in
+  volume)
+    if command -v wpctl >/dev/null 2>&1; then
+      wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null | awk '{v=$2 * 100; if (v < 0) v = 0; if (v > 100) v = 100; printf "%d", v}'
+    else
+      printf '0'
+    fi
+    ;;
+  brightness)
+    if command -v brightnessctl >/dev/null 2>&1; then
+      brightnessctl -m 2>/dev/null | awk -F, '{gsub(/%/, "", $4); printf "%d", $4}' | head -n1
+    else
+      printf '0'
+    fi
+    ;;
+  media)
+    metadata="$(playerctl --player=spotify metadata --format '{{artist}} - {{title}}' 2>/dev/null || playerctl metadata --format '{{artist}} - {{title}}' 2>/dev/null || true)"
+    metadata="$(printf '%s' "$metadata" | sed 's/^[[:space:]-]*//; s/[[:space:]-]*$//')"
+    [ -n "$metadata" ] && printf '%s' "$metadata" || printf 'no media'
+    ;;
+  battery)
+    battery="${BROKENBACK_BATTERY:-/sys/class/power_supply/BAT0}"
+    if [ -r "$battery/capacity" ]; then
+      capacity="$(cat "$battery/capacity")"
+      state="$(cat "$battery/status" 2>/dev/null || printf 'Unknown')"
+      printf '%s %s%%' "$state" "$capacity"
+    else
+      printf 'battery n/a'
+    fi
+    ;;
+  network)
+    network="offline"
+    if command -v nmcli >/dev/null 2>&1; then
+      network="$(nmcli -t -f ACTIVE,SSID dev wifi 2>/dev/null | awk -F: '$1=="yes"{print $2; exit}')"
+      [ -n "$network" ] || network="$(nmcli -t -f DEVICE,STATE dev status 2>/dev/null | awk -F: '$2=="connected"{print $1; exit}')"
+      [ -n "$network" ] || network="offline"
+    fi
+    printf '%s' "$network"
+    ;;
+  windows)
+    guess_bspwm_env
+    if command -v bspc >/dev/null 2>&1; then
+      bspc query -N -n .window 2>/dev/null | wc -l | tr -d ' '
+    else
+      printf '0'
+    fi
+    ;;
+  updates)
+    if command -v brokenback-update-status >/dev/null 2>&1; then
+      brokenback-update-status 2>/dev/null | strip_polybar_tags | grep -Eo '[0-9]+' | tail -n1 || printf '0'
+    else
+      printf '0'
+    fi
+    ;;
+  dnd)
+    if command -v dunstctl >/dev/null 2>&1 && dunstctl is-paused 2>/dev/null | grep -q true; then
+      printf 'on'
+    else
+      printf 'off'
+    fi
+    ;;
+  *)
+    printf 'n/a'
+    ;;
+esac

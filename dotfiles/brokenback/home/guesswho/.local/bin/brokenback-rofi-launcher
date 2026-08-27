@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+set -eu
+
+mode="${1:-drun}"
+
+case "$mode" in
+  drun|run|filebrowser|window) ;;
+  *) mode="drun" ;;
+esac
+
+exec "${HOME}/.config/rofi/launchers/type-6/launcher.sh" "$mode"

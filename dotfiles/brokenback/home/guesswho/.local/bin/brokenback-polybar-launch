@@ -1,0 +1,129 @@
+#!/usr/bin/env sh
+set -eu
+
+config="${HOME}/.config/polybar/config.ini"
+cache_dir="${XDG_CACHE_HOME:-${HOME}/.cache}/brokenback"
+log_file="${cache_dir}/polybar.log"
+target="${1:-all}"
+
+mkdir -p "$cache_dir"
+
+case "$target" in
+  all)
+    : > "$log_file"
+    pkill -u "${USER}" -x polybar >/dev/null 2>&1 || true
+    while pgrep -u "${USER}" -x polybar >/dev/null 2>&1; do
+      sleep 0.1
+    done
+    ;;
+  left)
+    pkill -u "${USER}" -f '[p]olybar .* brokenback-left' >/dev/null 2>&1 || true
+    while pgrep -u "${USER}" -f '[p]olybar .* brokenback-left' >/dev/null 2>&1; do
+      sleep 0.1
+    done
+    ;;
+  *)
+    target="all"
+    ;;
+esac
+
+clamp() {
+  value="$1"
+  min="$2"
+  max="$3"
+  if [ "$value" -lt "$min" ]; then
+    echo "$min"
+  elif [ "$value" -gt "$max" ]; then
+    echo "$max"
+  else
+    echo "$value"
+  fi
+}
+
+launch_for_monitor() {
+  monitor="$1"
+  geometry="$2"
+
+  screen_w="$(printf '%s\n' "$geometry" | sed -E 's/^([0-9]+)x.*/\1/')"
+  if ! [ "$screen_w" -gt 0 ] 2>/dev/null; then
+    screen_w=1920
+  fi
+
+  # Polybar owns the visible left workspace pill with app-aware dots/icons.
+  workspace_count=3
+  workspace_status="${HOME}/.local/bin/brokenback-workspaces-status"
+  if [ -x "$workspace_status" ]; then
+    workspace_count="$("$workspace_status" --count 2>/dev/null || printf 3)"
+  fi
+  case "$workspace_count" in
+    ''|*[!0-9]*) workspace_count=3 ;;
+  esac
+  base_left_w=158
+  workspace_step=34
+  extra_workspaces=$((workspace_count - 3))
+  [ "$extra_workspaces" -gt 0 ] || extra_workspaces=0
+  left_w="$(clamp $((base_left_w + extra_workspaces * workspace_step)) "$base_left_w" 396)"
+  windowcount_w=78
+  battery_w=96
+  datetime_w=240
+  gap=8
+
+  left_x=10
+  right_edge=$((screen_w - 10))
+  datetime_x=$((right_edge - datetime_w))
+  battery_x=$((datetime_x - gap - battery_w))
+  windowcount_x=$((battery_x - gap - windowcount_w))
+
+  center_min_x=$((left_x + left_w + 12))
+  center_max_x=$((windowcount_x - 12))
+  center_available=$((center_max_x - center_min_x))
+  if [ "$center_available" -lt 260 ]; then
+    center_w=0
+    center_x=0
+  else
+    center_w="$(clamp $((screen_w / 5)) 256 368)"
+    if [ "$center_w" -gt "$center_available" ]; then
+      center_w="$center_available"
+    fi
+    center_x=$(((screen_w - center_w) / 2))
+    if [ "$center_x" -lt "$center_min_x" ]; then
+      center_x="$center_min_x"
+    elif [ "$((center_x + center_w))" -gt "$center_max_x" ]; then
+      center_x=$((center_max_x - center_w))
+    fi
+  fi
+
+  export MONITOR="$monitor"
+  export BB_LEFT_W="$left_w"
+  export BB_LEFT_X="$left_x"
+  export BB_CENTER_W="$center_w"
+  export BB_CENTER_X="$center_x"
+  export BB_WINDOWCOUNT_W="$windowcount_w"
+  export BB_WINDOWCOUNT_X="$windowcount_x"
+  export BB_BATTERY_W="$battery_w"
+  export BB_BATTERY_X="$battery_x"
+  export BB_DATETIME_W="$datetime_w"
+  export BB_DATETIME_X="$datetime_x"
+
+  if [ "$target" = "all" ] || [ "$target" = "left" ]; then
+    polybar --config="$config" brokenback-left >>"$log_file" 2>&1 &
+  fi
+  # Center media is drawn by Eww now, so Polybar only owns left and right pills.
+  if [ "$target" = "all" ]; then
+    polybar --config="$config" brokenback-windowcount >>"$log_file" 2>&1 &
+    polybar --config="$config" brokenback-battery >>"$log_file" 2>&1 &
+    polybar --config="$config" brokenback-datetime >>"$log_file" 2>&1 &
+  fi
+}
+
+if command -v polybar >/dev/null 2>&1; then
+  monitors="$(polybar --list-monitors | sed -E 's/^([^:]+): ([0-9]+x[0-9]+).*/\1 \2/')"
+  if [ -z "$monitors" ]; then
+    launch_for_monitor "" "1920x1080"
+  else
+    printf '%s\n' "$monitors" | while read -r monitor geometry; do
+      [ -n "$monitor" ] || continue
+      launch_for_monitor "$monitor" "$geometry"
+    done
+  fi
+fi
